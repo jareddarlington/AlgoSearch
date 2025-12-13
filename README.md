@@ -6,7 +6,7 @@
 
 1. Scrape arXiv for CS papers
     - Only in the "Data Structures and Algorithms" category for now
-    - Not sure the best option for this yet, but [arXiv's API](https://info.arxiv.org/help/api/) provides abstracts, metadata, and links to html/pdfs - html/pdfs are harder to parse for algorithms than LaTeX files in this case though
+    - Not sure the best option for this yet, but [arXiv's API](https://info.arxiv.org/help/api/) provides abstracts, metadata, and links to html/pdfs - html/pdfs are harder to parse for algorithms than LaTeX files in this case though - Claude Sonnet 4.5 seems to be really consistent at parsing algorithms via pdfs (no direct LaTeX), so likely use that or a smaller Claude model
 2. Store each algorithm with its paper's abstract and metadata (also surrounding context for embedding but not long term)
 3. Pass algorithm data into summarization model
     - Probably use deepseek-coder-1.3b-instruct to start, maybe switch to a larger or newer model later (DeepSeek-Coder-V2-Lite-Instruct)
@@ -39,3 +39,7 @@
 -   Replacing FAISS with my own search implementation could also be fun (HNSW or IVF+PQ) - might be a whole other project though
 -   Could add intent detection (for lexical vs semantic search decision - right now the system is only semantic)
 -   Collect more data for fine-tuning (click-through, etc)
+
+## Acknowledgements
+
+Thank you to arXiv for use of its open access interoperability.
