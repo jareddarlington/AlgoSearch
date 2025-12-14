@@ -1,4 +1,4 @@
-You are given a research paper PDF. Extract every algorithm defined in the paper.
+You are given a research paper PDF. Extract every algorithm defined in the paper. If there are no defined algorithms, output "N/A".
 
 For each algorithm, rewrite it exactly in LaTeX using the algorithm and algpseudocode packages. Use a consistent modern style with \begin{algorithm} and \begin{algorithmic}[1]. Use \Require for inputs, \Ensure for outputs, \State for steps, \gets for assignment, and \textsc{} for procedure names.
 
@@ -20,7 +20,7 @@ Use the following as a formatting example:
 
 After the LaTeX block, list and briefly describe every variable, parameter, and constant appearing in the algorithm.
 
-Then write one concise paragraph describing what the algorithm does and its purpose at a high level. The description paragraph must be self-contained. Do not reference other algorithms, later sections, or the role of the algorithm within the paper (e.g., “forms the foundation for”, “extended by”, “used in Algorithm X”), unless such a reference is strictly required to define an input or output.
+Then write one concise paragraph describing what the algorithm does and its purpose at a high level. The description paragraph must be self-contained. Do not reference other algorithms, later sections, or the role of the algorithm within the paper (e.g., "forms the foundation for", "extended by", "used in Algorithm X"), unless such a reference is strictly required to define an input or output.
 
 Output only the algorithm LaTeX, the variable list, and the description. Do not add commentary or extra formatting.
 
