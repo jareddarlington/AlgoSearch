@@ -1,1613 +1,838 @@
-FILE NAME: abstract.tex
+FILE NAME: Hierarchical_revised.tex
 
-\abstract{
-Optimal transportation, or computing the Wasserstein or ``earth mover's'' distance between two $n$-dimensional distributions, is a fundamental primitive which arises in many learning and statistical settings. We give an algorithm which solves the problem to additive $\epsilon$ accuracy with $\tilde{O}(1/\epsilon)$ parallel depth and $\tilde{O}\left(n^2/\epsilon\right)$ work. 
- \cite{BlanchetJKS18, Quanrud19} obtained this runtime through reductions to positive linear programming and matrix scaling. However, these reduction-based algorithms use subroutines which may be impractical due to requiring solvers for second-order iterations (matrix scaling) or non-parallelizability (positive LP). Our methods match the previous-best work bounds by \cite{BlanchetJKS18, Quanrud19} while either improving parallelization or removing the need for linear system solves, and improve upon the previous best first-order methods running in time $\tilde{O}(\min(n^2 / \epsilon^2, n^{2.5}  / \epsilon))$ \cite{DvurechenskyGK18, LinHJ19}. We obtain our results by a primal-dual extragradient method, motivated by recent theoretical improvements to maximum flow \cite{Sherman17}.
+\documentclass{article}
+
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{cite}
+\usepackage{xspace}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usetikzlibrary{graphs}
+
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{property}{Property}
+\newtheorem{remark}{Observation}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\newtheorem{innercustomthm}{Lemma}
+\newenvironment{customlemma}[1]
+  {\renewcommand\theinnercustomthm{#1}\innercustomthm}
+  {\endinnercustomthm}
+
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\HCtree}{HC-tree}
+\newcommand{\DCcost}{\mathsf{DC\text{-}cost}}
+%\newcommand{DC-cost}{DC-cost}
+\newcommand{\lca}{\textsc{Lca}}
+
+%%\title{Hierarchical Clusterings of Unweighted Graphs}
+
+%\author
+%{
+%	Svein H\o gemo\\
+%		{\normalsize\em Department of %Informatics, University of Bergen, Norway}\\%
+%		Christophe Paul\thanks{Research supported  by  the ANR project ESIGMA (ANR-17-CE23-0010).}\\
+%			{\normalsize\em CNRS, University of Montpellier, France}\\
+%	Jan Arne Telle\\
+%	{\normalsize\em Department of Informatics, University of Bergen, Norway}\\
+%}
+
+
+
+\title{Hierarchical Clusterings of Unweighted Graphs}
+
+\author{Svein H{\o}gemo, Cristophe Paul and Jan Arne Telle}
+
+%\authorrunning{S. H{\o}gemo, C. Paul and J.A. Telle}
+
+%\ccsdesc[100]{Theory of computation~Design and analysis of algorithms}
+%\keywords{Hierarchical Clustering}
+%\Copyright{Svein Høgemo, Christophe Paul, and Jan Arne Telle}
+
+%\EventEditors{Javier Esparza and Daniel Kr{\'a}l'}
+%\EventNoEds{2}
+%\EventLongTitle{45th International Symposium on Mathematical Foundations of Computer Science (MFCS 2020)}
+%\EventShortTitle{MFCS 2020}
+%\EventAcronym{MFCS}
+%\EventYear{2020}
+%\EventDate{August 24--28, 2020}
+%\EventLocation{Prague, Czech Republic}
+%\EventLogo{}
+%\SeriesVolume{170}
+%\ArticleNo{40}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% hierarchical clustering of a graph is a binary tree whose leaves are in 1-1 correspondence with the vertices of the graph.
+We study the complexity of finding an optimal hierarchical clustering of an unweighted similarity graph under the recently introduced Dasgupta objective function. 
+%Such clusterings are represented by a binary tree whose leaves are in 1-1 correspondence with the vertices of the graph. 
+We introduce a proof technique, called the normalization procedure, that takes any such clustering of a graph $G$ and iteratively improves it until a desired target clustering of $G$ is reached.
+We use this technique to show both a negative and a positive complexity result. Firstly, we show that in general the problem is NP-complete. 
+%There are graph classes, e.g. co-bipartite graphs, where it is easy to find an optimal clustering. 
+%We show that computing an optimal hierarchical clustering of an unweighted similarity graph under the Dasgupta cost function is NP-complete. 
+Secondly, we consider min-well-behaved graphs, which are graphs $H$ having the property that for any $k$ the graph $H^{(k)}$ being the join of $k$ copies of $H$ has an optimal hierarchical clustering that splits each copy of $H$ in the same optimal way. To optimally cluster such a graph $H^{(k)}$ we thus only need to optimally cluster the smaller graph $H$.
+Co-bipartite graphs are min-well-behaved, but otherwise they seem to be scarce. We use the normalization procedure to show that also the cycle on 6 vertices is min-well-behaved.
+\end{abstract}
+
+\section{Introduction}
+
+%A common framework for defining graph width parameters, like rank-width and mim-width, is by a branch decomposition over the vertex set. This is a natural hierarchical clustering of a graph $G$, represented as a binary tree with the vertices of $G$ at its leaves. The tree is used for solving optimization problems on $G$, by a bottom-up traversal, gathering solutions to subgraphs of $G$ induced by the vertices mapped to leaves of the subtrees. In a good tree the bipartite graphs giving the adjacencies between such subgraphs and the rest of the graph should be easy to describe, e.g. for use with rank-width its adjacency matrix should have low rank.  Such decompositions of graphs are also used in the area of clustering, and recently an objective function, Dasgupta's objective, was introduced to measure their quality. In this paper we investigate some combinatorial questions arising from this function.
+
+Clustering is an unsupervised machine learning technique and one of the most important problems in data-mining~\cite{Har75,CEF+06,KT09,HTF09}. Given a data set and a pairwise similarity measure, the task is to partition the data set into clusters so that similar data points belong to the same cluster.  
+%Such a partition is known as \emph{flat clustering}. 
+%A plethora of clustering heuristics have been developed, including \emph{agglomerative heuristics} such as single-linkage, average-linkage and \emph{partitioning heuristics} such as sparsest-cut amd k-means (see \cite{Har75}, or Chapter 14 of~\cite{HTF09} for example). 
+%Sanjoy Dasgupta. A cost function for similarity-based hierarchical clustering. In Proceedings of the 48th Annual ACM SIGACT Symposium on Theory of Computing, STOC 2016, pages 118–127,2016. 
+%[CKM+19] Vincent Cohen-Addad, Varun Kanade, Frederik Mallmann-Trenn, Claire Mathieu: Hierarchical Clustering: Objective Functions and Algorithms. J. ACM 66(4): 26:1-26:42 (2019)
+%Moses Charikar and Vaggos Chatziafratis. Approximate hierarchical clustering via sparsest cut and spreading metrics. In Proceedings of the Twenty-Eighth Annual ACM- SIAM Symposium on Discrete Algorithms, SODA 2017, pages 841–854, 2017.
+%In contrast to the flat clustering problem, i
+In a \emph{hierarchical clustering} the data set is recursively partitioned into smaller clusters, by means of a rooted binary tree whose leaves are in one-to-one correspondence with the data points. Hierarchical clustering emerged as a central task in the study of phylogenetic trees~\cite{SS63,Bun71}. Such a clustering is very general, capturing clustering structure at all levels of granularity, with a clustering into two parts given by the root of the tree, and finer clusterings given by lower levels of the tree. Algorithms for hierarchical clustering have been widely used for many years, but it was only recently that an objective function to measure their quality was formalized. In a STOC 2017 paper 
+%their theoretical study was hampered by the lack of an objective function they are trying to optimize.
+%But how to measure the quality of the hierarchical clustering? 
+%A common approach is to evaluate the quality in terms of costs of flat clusterings induced by the hierarchical clustering. For example, one could consider as the cost, the maximum radius of a cluster among every $k$-clustering induced by a hierarchical clustering~\cite{DP05}. 
+%Surprisingly, this question was has been formalized as a combinatorial optimization problem on the hierarchical clustering itself. In
+~\cite{Das16} Dasgupta introduced a natural objective function measuring the global cost of a hierarchical clustering. From now on, this function will be called the Dasgupta Clustering function - DC function. Several follow-ups to Dasgupta's work have appeared, we mention only a couple: in~\cite{CC17}, the authors improve the ratio of the approximation algorithm proposed by Dasgutpa;  in~\cite{CKM+19}, the authors revisit the DC function and propose some axioms that a "good" cost function should satisfy.
+
+In this paper we investigate the complexity of finding the DC-optimal hierarchical clustering for {\em unweighted} similarity graphs. Thus, we assume that any pair of data points has been marked as either 'similar' or 'non-similar' and represent this information as an undirected, unweighted graph $G$ whose vertex set $V(G)$ is the set of data points and adjacencies represent similarity. We ask for an \HCtree{} (a Hierarchical Clustering tree), a rooted binary tree $T$ with leaves in one-to-one correspondence with $V(G)$, such that the DC-cost of $T$ - i.e. the sum over all edges $uv$ of $G$, of the number of leaves of the subtree rooted at the least common ancestor of $u$ and $v$ - is minimized. 
+Dasgupta \cite{Das16} showed that the edge-weighted version of this problem, with weights representing degree of similarity, is NP-complete. In this paper we focus on unweighted graphs, the hardness of which was left open by Dasgupta~\cite{Das19}. 
+Unweighted graphs naturally appear in this context, for example in the correlation clustering problem~\cite{BBC04}. It is also a common approach 
+%in the context of clustering algorithms 
+to transform a similarity matrix into a similarity graph by fixing a threshold value that determines whether two objects are similar or not (see~\cite{Har75} for example). We focus on dense similarity graphs.
+%I WILL ALSO CHECK THE BOOK OF STEEL AND SAMPLE ON PHYLOGENETIC TOMORROW MORNING.
+Such graphs typically appear when there is a fixed threshold for similarity that is set to be very low, for example the existence of email correspondence within a single (small) organization, or existence of non-zero trade relations between countries. 
+We show that the problem remains NP-complete, already for dense graphs. More precisely, by a reduction building on the one used in \cite{Das16}, we establish the NP-hardness for unweighted $n$-vertex graphs where every vertex has at least $n-6$ neighbours.
+
+Note that all pairs of vertices will be split into distinct clusters at some point in the HC-tree, namely at their least common ancestor. Minimizing the DC-cost encourages pairs of adjacent vertices (similar data points) to be split lower in the tree than non-adjacent vertex pairs (non-similar data points). For example, if $G$ is the complement of a bipartite graph on color classes $A, B$ then any HC-tree $T$ that splits $A$ and $B$ at the root is optimal, which follows easily from observations in \cite{Das16} since $G[A]$ and $G[B]$ are complete graphs. 
+%XTOF: It is rather because $G[A]$ and $G[B]$ are distinct connected components, right ?
+Dasgupta showed that minimizing the DC-cost of $G$ is equivalent to maximizing the DC-cost of the complement of $G$. Thus the previous result can be restated to say that for a bipartite graph any HC-tree splitting the two color classes at the root will have max DC-cost, rendering the result trivial as all edges are now split at the root.
+In the current paper we will usually take this viewpoint, thus considering {\em unweighted sparse} graphs and looking for an HC-tree {\em maximizing} the DC-cost, typically splitting pairs of adjacent vertices, now denoting non-similarity, at higher levels of the tree.
+
+As noted, bipartite graphs are then trivial, but what other graphs can be handled efficiently? What about $G$ being a collection of disjoint copies of the same bipartite graph? Maximizing DC-cost is still trivial, in fact $G$ is again bipartite, so at the root we can simply split each copy in the same optimal way. Let us define a more complex property generalizing this behavior. Consider a graph $H$ of max DC-cost $W$ achievable by some HC-tree $T$ and let the graph $H^{(k)}$ consist of $k$ disjoint copies of $H$. If we use $T$ to simultaneously cluster each of the $k$ copies of $H$ then each leaf of $T$ will contain $k$ copies of the same vertex. These vertices induce a stable set so we can further cluster them in an arbitrary way to get an HC-tree $T^{(k)}$. Note that this tree will have DC-cost $k^2W$ since each edge of $H$ has $k$ copies in $H^{(k)}$, and the subtree of $T^{(k)}$ that splits an edge contains a multiplicative factor $k$ more vertices than the similar subtree of $T$. We call such $H$ max-well-behaved if for any $k$ the max DC-cost of $H^{(k)}$ is no higher than $k^2t$, and the complement of $H$ min-well-behaved. 
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+[innernode/.style={circle,draw=black,fill=black,inner sep=0pt,minimum size=1mm},
+leaf1/.style={circle,draw=blue,fill=blue,inner sep=0pt,minimum size=1.5mm},
+leaf2/.style={circle,draw=red,fill=red,inner sep=0pt,minimum size=1.5mm}]
+
+
+%-------------------------------------------------
+\node [black] at (-10.5,-3.5) {$Q_{2,3}$};
+
+\node (i1) at (-11.1,-1) [leaf1] {} ;
+\node (i2) at (-11.1,-1.8) [leaf1] {} ;
+\node (i3) at (-11.1,-2.6) [leaf1] {} ;
+\node (c1) at (-9.9,-1.4) [leaf2] {} ;
+\node (c2) at (-9.9,-2.2) [leaf2] {} ;
+
+\draw [-] (c1) to (c2);
+
+\foreach \x in {1,2,3}{
+	\foreach \y in {1,2}{
+		\draw [-] (i\x) to (c\y) ;
+		\node [red,right] at (c\y.east) {$c_{\y}$};
+		}
+	\node [blue,left] at (i\x.east) {$s_{\x}~$};
+	}
+
+%-------------------------------------------------
+\node [black] at (-7+0.25,-3.5) {$T$};
+
+\node (y0) at (-7+0.25,-1) [innernode] {} ;
+\node (y1) at (-8+0.25,-1.5) [innernode] {} ;
+\node (y2) at (-6+0.25,-1.5) [innernode] {} ;
+\node (y3) at (-8.5+0.25,-2) [innernode] {} ;
+
+\draw [-] (y0) to (y1);
+\draw [-] (y0) to (y2);
+\draw [-] (y1) to (y3);
+
+\foreach \x in {1,2}{
+	\node (t\x) at (-7+0.25-\x,-2.5) [leaf1] {} ;
+	\node [blue,below] at (t\x.south) {$s_{\x}$};
 }
 
-
-FILE NAME: algorithm.tex
-
-\section{Algorithm}
-\label{app:algorithm}
-
-We give the complete algorithm for approximating optimal transport distance to additive $\epsilon$ here. We assume $C \in \R_{\geq 0}^{n \times n}$ and $r, c \in \Delta^n$. Finally, we refer to blocks of variable $z$ on a product space as $z^x, z^y$, i.e. $z = (z^x, z^y)$. Again $r(X) \defeq X\1$, $c(X) \defeq X^\top\1$.
-
-\begin{algorithm}[H]
-	\caption{$\hat{X} = \texttt{Optimal-Transport}(C, \epsilon, r, c)$: Produces $\epsilon$-approximate transportation plan}
-	\label{alg:full}
-	\begin{algorithmic}
-		\STATE Vectorize $C$ to produce $d$.
-		\STATE Let $b$ be $r, c$ concatenated; let $A$ be the incidence matrix of a complete $n \times n$ bipartite graph.
-		\STATE $t \gets 0$.
-		\STATE $x_0 \gets \frac{1}{n^2}\1$, $y_0 \gets \bf{0}_{2n}$.
-		\STATE $s_0^x \gets \bf{0}_{n^2}$, $s_0^y \gets \bf{0}_{2n}$.
-		\STATE $\Theta \gets 20\dmax \log n + 4\dmax$.
-		\WHILE {$d^\top x_{t + \half} + 2\dmax\norm{Ax_{t + \half} - b}_1 \leq -2\dmax b^\top y_{t + \half} + \max_j \left[d + 2\dmax A^\top y_{t + \half}\right]_j + \epsilon$}
-		%\STATE $g^x_t \gets d + 2\dmax A^\top y_t$.
-		%\STATE $g^y_t \gets 2\dmax(b - Ax_t)$.
-		\STATE $t \gets t + 1$.
-		\STATE $k \gets 0$.
-		\STATE $x'_0 \gets x_{t - \half}$, $y'_0 \gets y_{t - \half}$.
-		\FOR{$0 \leq k < \ceil{24 \log\left(\left(\frac{88\dmax}{\epsilon^2} + \frac{2}{\epsilon}\right)\Theta\right)}$} 
-		\STATE $x'_k \gets \exp\left(\frac{1}{20\dmax}s_t^x + \frac{1}{10} A^\top (y'_{k - 1})^2 \right)$, $x'_k \gets x'_k / \norm{x'_k}_1$.
-		\STATE $y'_k \gets \min\left(1, \max\left(-1, \frac{-s_t^y}{4\dmax Ax'_k} \right)\right)$. Operations are element-wise.
-		\ENDFOR
-		\STATE $x_{t} \gets x'_k$, $y_{t} \gets y'_k$.
-		\STATE $s_{t + \half}^x \gets s_t^x + \frac{1}{3}\left(d + 2\dmax A^\top y_{t}\right)$.
-		\STATE $s^y_{t + \half} \gets s_t^y + \frac{1}{3}\left(2\dmax(b - Ax_{t})\right)$.
-		\STATE $k \gets 0$.
-		\STATE $x'_0 \gets x_{t}$, $y'_0 \gets y_{t}$. 
-		\FOR {$0 \leq k < \ceil{24 \log\left(\left(\frac{88\dmax}{\epsilon^2} + \frac{2}{\epsilon}\right)\Theta\right)}$}
-		\STATE $x'_k \gets \exp\left(\frac{1}{20\dmax}s_{t + \half}^x + \frac{1}{10} A^\top (y'_{k - 1})^2 \right)$, $x'_k \gets x'_k / \norm{x'_k}_1$.
-		\STATE $y'_k \gets \min\left(1, \max\left(-1, \frac{-s_{t + \half}^y }{4\dmax Ax'_k} \right)\right)$. Operations are element-wise.
-		\ENDFOR
-		\STATE $x_{t + \half} \gets x'_k$, $y_{t + \half} \gets y'_k$.
-		\STATE $s_{t + 1}^x \gets s_t^x + \frac{1}{6}\left(d + 2\dmax A^\top y_{t + \half}\right)$.
-		\STATE $s^y_{t + 1} \gets s_t^y + \frac{1}{6}\left(2\dmax(b - Ax_{t + \half})\right)$.
-		\ENDWHILE
-		\STATE Un-vectorize $x$ to produce $\tilde{X}$.
-		\STATE $X' \gets \diag{\min\left(\frac{r}{r(\tilde{X})}, 1\right)} \tilde{X}$.
-		\STATE $X'' \gets X' \diag{\min\left(\frac{c}{c(X')}, 1\right)}$.
-		\STATE $e_r \gets r - \1^\top r(X''), e_c \gets c - \1^\top c(X''), E \gets \1^\top e_r$.
-		\STATE $\hat{X} \gets X'' + \frac{1}{E} e_r e_c^\top$.
-		\STATE $\textbf{return}$ $\hat{X}$.
-	\end{algorithmic}
-\end{algorithm}
-
-We remark that there are a variety of termination conditions that can be useful in practice for the alternating minimization procedure. For example, a standard early-stopping condition based on the observed movement of consecutive iterates was very successful in practice (Appendix~\ref{app:experiment_details}).
-
-FILE NAME: bib_macros.tex
-
-% branched from Michael Forbes' macro document
-  % September 2014
-  \usepackage{nth}
-  \usepackage{intcalc}
-
-  \newcommand{\cSTOC}[1]{\nth{\intcalcSub{#1}{1968}}\ Annual\ ACM\ Symposium\ on\ Theory\ of\ Computing\ (STOC)}
-  \newcommand{\cFSTTCS}[1]{\nth{\intcalcSub{#1}{1980}}\ International\ Conference\ on\ Foundations\ of\ Software\ Technology\ and\ Theoretical\ Computer\ Science\ (FSTTCS)}
-  \newcommand{\cCCC}[1]{\nth{\intcalcSub{#1}{1985}}\ Annual\ IEEE\ Conference\ on\ Computational\ Complexity\ (CCC)}
-  \newcommand{\cFOCS}[1]{\nth{\intcalcSub{#1}{1959}}\ Annual\ IEEE\ Symposium\ on\ Foundations\ of\ Computer\ Science\ (FOCS)}
-  \newcommand{\cRANDOM}[1]{\nth{\intcalcSub{#1}{1996}}\ International\ Workshop\ on\ Randomization\ and\ Computation\ (RANDOM)}
-  \newcommand{\cISSAC}[1]{#1\ International\ Symposium\ on\ Symbolic\ and\ Algebraic\ Computation\ (ISSAC)}
-  \newcommand{\cICALP}[1]{\nth{\intcalcSub{#1}{1973}}\ International\ Colloquium\ on\ Automata,\ Languages and\ Programming\ (ICALP)}
-  \newcommand{\cCOLT}[1]{\nth{\intcalcSub{#1}{1987}}\ Annual\ Conference\ on\ Computational\ Learning\ Theory\ (COLT)}
-  \newcommand{\cCSR}[1]{\nth{\intcalcSub{#1}{2005}}\ International\ Computer\ Science\ Symposium\ in\ Russia\ (CSR)}
-  \newcommand{\cMFCS}[1]{\nth{\intcalcSub{#1}{1975}}\ International\ Symposium\ on\ the\ Mathematical\ Foundations\ of\ Computer\ Science\ (MFCS)}
-  \newcommand{\cPODS}[1]{\nth{\intcalcSub{#1}{1981}}\ Symposium\ on\ Principles\ of\ Database\ Systems\ (PODS)}
-  \newcommand{\cSODA}[1]{\nth{\intcalcSub{#1}{1989}}\ Annual\ ACM-SIAM\ Symposium\ on\ Discrete\ Algorithms\ (SODA)}
-  \newcommand{\cNIPS}[1]{Advances\ in\ Neural\ Information\ Processing\ Systems\ \intcalcSub{#1}{1987} (NIPS)}
-  \newcommand{\cWALCOM}[1]{\nth{\intcalcSub{#1}{2006}}\ International\ Workshop\ on\ Algorithms\ and\ Computation\ (WALCOM)}
-  \newcommand{\cSoCG}[1]{\nth{\intcalcSub{#1}{1984}}\ Annual\ Symposium\ on\ Computational\ Geometry\ (SCG)}
-  \newcommand{\cKDD}[1]{\nth{\intcalcSub{#1}{1994}}\ ACM\ SIGKDD\ International\ Conference\ on\ Knowledge\ Discovery\ and\ Data\ Mining\ (KDD)}
-  \newcommand{\cICML}[1]{\nth{\intcalcSub{#1}{1983}}\ International\ Conference\ on\ Machine\ Learning\ (ICML)}
-  \newcommand{\cAISTATS}[1]{\nth{\intcalcSub{#1}{1997}}\ International\ Conference\ on\ Artificial\ Intelligence\ and\ Statistics\ (AISTATS)}
-  \newcommand{\cITCS}[1]{\nth{\intcalcSub{#1}{2009}}\ Conference\ on\ Innovations\ in\ Theoretical\ Computer\ Science\ (ITCS)}
-  \newcommand{\cPODC}[1]{{#1}\ ACM\ Symposium\ on\ Principles\ of\ Distributed\ Computing\ (PODC)}
-  \newcommand{\cAPPROX}[1]{\nth{\intcalcSub{#1}{1997}}\ International\ Workshop\ on\ Approximation\ Algorithms\ for\  Combinatorial\ Optimization\ Problems\ (APPROX)}
-  \newcommand{\cSTACS}[1]{\nth{\intcalcSub{#1}{1983}}\ International\ Symposium\ on\ Theoretical\ Aspects\ of\  Computer\ Science\ (STACS)}
-  \newcommand{\cMTNS}[1]{\nth{\intcalcSub{#1}{1991}}\ International\ Symposium\ on\ Mathematical\ Theory\ of\  Networks\ and\ Systems\ (MTNS)}
-  \newcommand{\cICM}[1]{International\ Congress\ of\ Mathematicians\ {#1} (ICM)}
-
-  \newcommand{\pSTOC}[1]{Preliminary\ version\ in\ the\ \cSTOC{#1}, #1}
-  \newcommand{\pFSTTCS}[1]{Preliminary\ version\ in\ the\ \cFSTTCS{#1}, #1}
-  \newcommand{\pCCC}[1]{Preliminary\ version\ in\ the\ \cCCC{#1}, #1}
-  \newcommand{\pFOCS}[1]{Preliminary\ version\ in\ the\ \cFOCS{#1}, #1}
-  \newcommand{\pRANDOM}[1]{Preliminary\ version\ in\ the\ \cRANDOM{#1}, #1}
-  \newcommand{\pISSAC}[1]{Preliminary\ version\ in\ the\ \cISSAC{#1}, #1}
-  \newcommand{\pICALP}[1]{Preliminary\ version\ in\ the\ \cICALP{#1}, #1}
-  \newcommand{\pCOLT}[1]{Preliminary\ version\ in\ the\ \cCOLT{#1}, #1}
-  \newcommand{\pCSR}[1]{Preliminary\ version\ in\ the\ \cCSR{#1}, #1}
-  \newcommand{\pMFCS}[1]{Preliminary\ version\ in\ the\ \cMFCS{#1}, #1}
-  \newcommand{\pPODS}[1]{Preliminary\ version\ in\ the\ \cPODS{#1}, #1}
-  \newcommand{\pSODA}[1]{Preliminary\ version\ in\ the\ \cSODA{#1}, #1}
-  \newcommand{\pNIPS}[1]{Preliminary\ version\ in\ \cNIPS{#1}, #1}
-  \newcommand{\pWALCOM}[1]{Preliminary\ version\ in\ the\ \cWALCOM{#1}, #1}
-  \newcommand{\pSoCG}[1]{Preliminary\ version\ in\ the\ \cSoCG{#1}, #1}
-  \newcommand{\pKDD}[1]{Preliminary\ version\ in\ the\ \cKDD{#1}, #1}
-  \newcommand{\pICML}[1]{Preliminary\ version\ in\ the\ \cICML{#1}, #1}
-  \newcommand{\pAISTATS}[1]{Preliminary\ version\ in\ the\ \cAISTATS{#1}, #1}
-  \newcommand{\pITCS}[1]{Preliminary\ version\ in\ the\ \cITCS{#1}, #1}
-  \newcommand{\pPODC}[1]{Preliminary\ version\ in\ the\ \cPODC{#1}, #1}
-  \newcommand{\pAPPROX}[1]{Preliminary\ version\ in\ the\ \cAPPROX{#1}, #1}
-  \newcommand{\pSTACS}[1]{Preliminary\ version\ in\ the\ \cSTACS{#1}, #1}
-  \newcommand{\pMTNS}[1]{Preliminary\ version\ in\ the\ \cMTNS{#1}, #1}
-  \newcommand{\pICM}[1]{Preliminary\ version\ in\ the\ \cICM{#1}, #1}
+\node (t3) at (-7.5+0.25,-2) [leaf1] {} ;
+	\node [blue,below] at (t3.south) {$s_3$};
 
 
+\draw [-] (y3) to (t1);
+\draw [-] (y3) to (t2);
+\draw [-] (y1) to (t3);
 
-  \newcommand{\STOC}[1]{Proceedings\ of\ the\ \cSTOC{#1}}
-  \newcommand{\FSTTCS}[1]{Proceedings\ of\ the\ \cFSTTCS{#1}}
-  \newcommand{\CCC}[1]{Proceedings\ of\ the\ \cCCC{#1}}
-  \newcommand{\FOCS}[1]{Proceedings\ of\ the\ \cFOCS{#1}}
-  \newcommand{\RANDOM}[1]{Proceedings\ of\ the\ \cRANDOM{#1}}
-  \newcommand{\ISSAC}[1]{Proceedings\ of\ the\ \cISSAC{#1}}
-  \newcommand{\ICALP}[1]{Proceedings\ of\ the\ \cICALP{#1}}
-  \newcommand{\COLT}[1]{Proceedings\ of\ the\ \cCOLT{#1}}
-  \newcommand{\CSR}[1]{Proceedings\ of\ the\ \cCSR{#1}}
-  \newcommand{\MFCS}[1]{Proceedings\ of\ the\ \cMFCS{#1}}
-  \newcommand{\PODS}[1]{Proceedings\ of\ the\ \cPODS{#1}}
-  \newcommand{\SODA}[1]{Proceedings\ of\ the\ \cSODA{#1}}
-  \newcommand{\NIPS}[1]{\cNIPS{#1}}
-  \newcommand{\WALCOM}[1]{Proceedings\ of\ the\ \cWALCOM{#1}}
-  \newcommand{\SoCG}[1]{Proceedings\ of\ the\ \cSoCG{#1}}
-  \newcommand{\KDD}[1]{Proceedings\ of\ the\ \cKDD{#1}}
-  \newcommand{\ICML}[1]{Proceedings\ of\ the\ \cICML{#1}}
-  \newcommand{\AISTATS}[1]{Proceedings\ of\ the\ \cAISTATS{#1}}
-  \newcommand{\ITCS}[1]{Proceedings\ of\ the\ \cITCS{#1}}
-  \newcommand{\PODC}[1]{Proceedings\ of\ the\ \cPODC{#1}}
-  \newcommand{\APPROX}[1]{Proceedings\ of\ the\ \cAPPROX{#1}}
-  \newcommand{\STACS}[1]{Proceedings\ of\ the\ \cSTACS{#1}}
-  \newcommand{\MTNS}[1]{Proceedings\ of\ the\ \cMTNS{#1}}
-  \newcommand{\ICM}[1]{Proceedings\ of\ the\ \cICM{#1}}
+\foreach \x in {1,2}{
+	\node (u\x) at (-7.5+0.25+\x,-2) [leaf2] {} ;
+	\node [red,below] at (u\x.south) {$c_{\x}$};
+}
 
-  \newcommand{\arXiv}[1]{\href{http://arxiv.org/abs/#1}{arXiv:#1}}
-  \newcommand{\farXiv}[1]{Full\ version\ at\ \arXiv{#1}}
-  \newcommand{\parXiv}[1]{Preliminary\ version\ at\ \arXiv{#1}}
-  \newcommand{\CoRR}{Computing\ Research\ Repository\ (CoRR)}
-
-  \newcommand{\cECCC}[2]{\href{http://eccc.hpi-web.de/report/20#1/#2/}{Electronic\ Colloquium\ on\ Computational\ Complexity\ (ECCC),\ Technical\ Report\ TR#1-#2}}
-  \newcommand{\ECCC}{Electronic\ Colloquium\ on\ Computational\ Complexity\ (ECCC)}
-  \newcommand{\fECCC}[2]{Full\ version\ in\ the\ \cECCC{#1}{#2}}
-  \newcommand{\pECCC}[2]{Preliminary\ version\ in\ the\ \cECCC{#1}{#2}}
-
-FILE NAME: experiment_details.tex
-
-\section{Experiment details}
-\label{app:experiment_details}
-
-Here, we give the implementation details for the experimental results discussed in Section~\ref{sec:experiments}, and a brief justification of experimental decisions we made.
-
-{\bf Dataset.} For both figures in Section~\ref{sec:experiments}, we had the following experimental setup. We randomly sampled a pair of digits from the MNIST dataset corresponding to the digit 1, and added a small amount of background noise for numerical stability, as is standard in the literature \cite{AltschulerWR17}. We downsampled the $28 \times 28$ pixel images to size $14 \times 14$ by skipping every other pixel to speed up experiments. Similar performances were observed across multiple random instances. Finally, the cost metric used was by Manhattan distance on the 2-dimensional grid.
-
-{\bf Objective value.} For simplicity, in all cases we measured objective value by the overestimate presented in \eqref{eq:pdl1reg}. By the proof of Lemma~\ref{lem:l1rounding}, this is an overestimate to the true objective after performing the rounding procedure in Algorithm~\ref{alg:round}. In practice, we observed that this overestimate was negligibly different from the objective after rounding.
-
-{\bf Sinkhorn implementation details.} We implemented the standard Sinkhorn algorithm, using different settings of $\eta^{-1}$. Sinkhorn iteration converges to an $\epsilon$-approximate transportation plan in theory when $\eta$ is very large, roughly $\log n / \epsilon$. However, in practice, it is observed that much smaller values of $\eta$ suffice for rapid convergence. We tracked the convergence of Sinkhorn iteration for $\eta = 70$ and $\eta = 5$, which we considered close to a theoretically guaranteed parameter and a much less conservative practical parameter, respectively. The optimized Sinkhorn algorithm converged at rates much faster than the predicted $\epsilon^{-2}$ rate on all experiments, outperforming all other methods, which we believe merits further investigation. Significantly larger values of $\eta$ led to numerical stability issues when computing $\exp(-\eta C)$.
-
-{\bf APDAMD implementation details.} We implemented the APDAMD algorithm (Algorithm 4 in \cite{LinHJ19}), with the quadratic regularizer (i.e. $\frac{1}{2\gamma}\norm{\lambda}_2^2$). We observed that the amount of the quadratic regularizer added did not affect the practical convergence of the algorithm. A simple reason for this is because the algorithm builds in a more aggressive step-size strategy, because the pessimistic $\gamma = O(n)$ is often too conservative to be necessary in practice. The figure tracks APDAMD convergence with $\eta = 10^{-2}, \epsilon = 10^{-3}$.
-
-{\bf Mirror prox.} For numerical stability considerations, we implemented our algorithm as an instance of mirror prox \cite{Nemirovski04}, another extragradient method which takes local iterations rather than accumulating a dual operator and taking steps with respect to some $\bar{z}$ (i.e. dual extrapolation). Although there is not a known proof of mirror prox convergence with an area-convex regularizer, we find this decision reasonable for several reasons. In general, variations of entropic mirror descent are well-known to be equivalent to their dual averaging versions; it is likely that a similar equivalence can be drawn between mirror prox and extragradient dual averaging, i.e. dual extrapolation. Furthermore, the standard proofs of dual extrapolation and mirror prox are quite similar; we believe it is likely that area-convexity results in convergence for mirror prox, although this merits further investigation.
-
-{\bf Termination.} We terminated our alternating minimization procedure when the movement of iterations in $\ell_1$ was negligible. Typically, we observed that 3-5 alternating steps sufficed for convergence.
-
-{\bf Step sizes.} We varied two parameters in our experiments: the step size $\frac{1}{\kappa}$ used in our extragradient algorithm, and the amount of entropy used in our regularizer (in the paper, we used 10 times entropy compared to the quadratic component $x^\top A^\top (y^2)$). One reason this may be reasonable in practice is similar to the observed behavior of the Sinkhorn iteration tuning the $\eta^{-1}$ parameter, and APDAMD performing a more-aggressive line search for the observed amount of regularizer necessary. To this end, we plotted the performance of three settings of our algorithm. 
-\begin{itemize}
-	\item In the ``unoptimized constants'', we set the constants to roughly those with theoretical guarantees, i.e. 10 times entropy and step size 1.
-	\item In the ``reasonably optimized constants'', we set the amount of entropy to be 4, and the step size to be $\dmax / 3$, to offset the $\dmax$ multiple of the regularizer used in our iterations. For smaller values of $\epsilon$, these settings compared favorably with APDAMD.
-	\item In the ``optimized constants'', we set the amount of entropy at 3, and the step size at $\dmax$. This setting outperformed APDAMD and was more competitive with Sinkhorn iteration.
-\end{itemize}
-
-{\bf Discussion.} We believe multiple interesting avenues of exploration arise from our experiments.
-\begin{itemize}
-	\item Sinkhorn with aggressively chosen $\eta$ outperformed all other methods we benchmarked against, and converged at rates faster than suggested by its known analyses. It may prove fruitful to study if further assumptions about practical instances explain this discrepancy.
-	\item Directly accelerated methods such as APDAMD also exhibit $\epsilon^{-1}$ convergence rates, at the cost of a worse dependence on dimension. However, this worst-case dependence can be mitigated if the instance is favorable in practice, i.e. by choosing $\gamma \approx O(1)$. This was observed to be the case in our experiments for the MNIST dataset. It is interesting to see if a similar adaptive tuning applies to our method with provable guarantees.
-	\item Our method did not exhibit instability when changing the amount of entropy in the regularizer, but it did exhibit vastly-improved convergence. It is possible that the amount of regularizer needed is not quite so large, perhaps through a more careful analysis.
-	\item We did not benchmark against the greedy Sinkhorn method of \cite{AltschulerWR17}, or consider numerical speedups such as those in \cite{AltschulerBRW18}. It remains open to explore if these practical speedups are applicable to first-order methods such as ours as well.
-\end{itemize}
+\draw [-] (y2) to (u1);
+\draw [-] (y2) to (u2);
 
 
+%-------------------------------------------------
+\node [black] at (-2,-3.5) {$T'$};
 
-FILE NAME: experiments.tex
+\node (a0) at (-2,0) [innernode] {} ;
+\foreach \x in {1,2,3,4}{
+	\node (a\x) at (-\x/2-2,-\x/2) [innernode] {} ;
+	\node (b\x) at (\x/2-2,-\x/2) [innernode] {} ;
+	}
 
-\section{Experiments}
-\label{sec:experiments}
+\foreach \x in {1,2}{
+	\node (i\x) at (-4.75+\x/2,-2.5) [leaf1] {} ;
+	\node [blue,below] at (i\x.south) {$s_{\x}$};
+	}
+\node (i3) at (-3.25,-2) [leaf1] {} ;
+\node [blue,below] at (i3.south) {$s_3$};
 
-We show experiments illustrating the potential of our algorithm to be useful in practice, by considering its performance on computing optimal transport distances on the MNIST dataset and comparing against algorithms in the literature including APDAMD \cite{LinHJ19} and Sinkhorn iteration. All comparisons are based on the number of matrix-vector multiplications (rather than iterations, due to our algorithm's alternating subroutine), the main computational component of all algorithms considered.
+\node (j1) at (-0.75,-2) [leaf1] {} ;
+\node [blue,below] at (j1.south) {$s'_{1}$};
+\foreach \x in {2,3}{
+	\node (j\x) at (0.75-2+\x/2,-2.5) [leaf1] {} ;
+	\node [blue,below] at (j\x.south) {$s'_{\x}$};
+	}
+
+\foreach \x in {1,2}{
+	\node (c\x) at (-\x/2-2+1/4,-\x/2-1/2) [leaf2] {} ;
+	\node [red,below] at (c\x.south) {$c'_{\x}$};
+	\node (d\x) at (\x/2-2-1/4,-\x/2-1/2) [leaf2] {} ;
+	\node [red,below] at (d\x.south) {$c_{\x}$};
+	}
+
+\foreach \x/\y in {0/1,1/2,2/3,3/4}
+	\draw [-] (a\x) to (a\y);
+\draw [-] (a0) to (b1) ;
+\foreach \x/\y in {1/2,2/3,3/4}
+	\draw [-] (b\x) to (b\y);
+
+\foreach \x in {1,2}{
+	\draw [-] (a\x) to (c\x);
+	\draw [-] (b\x) to (d\x);
+}
+
+\draw [-] (i1) to (a4);
+\draw [-] (i2) to (a4);
+\draw [-] (i3) to (a3);
+\draw [-] (j1) to (b3);
+\draw [-] (j2) to (b4);
+\draw [-] (j3) to (b4);
+
+\end{tikzpicture}
+\caption{The complete split graph $Q_{2,3}$
+%, i.e. a complete bipartite graph between a clique of size 2 and a stable set of size 3,
+is not max-well-behaved. We have $\DCcost(Q_{2,3},T)= 6 \times 5 + 1 \times 2 = 32$ which is the maximum possible. The HC-tree $T'$ of $Q_{2,3}^{(k)}$ with $k=2$ (vertices $s_1,c_1,...$ in one copy and $s'_1,c'_1,...$ in the other copy) satisfies $\DCcost(Q_{2,3}^{(k)},T')=130$ which is larger than $\DCcost(Q_{2,3},T)\times k^2=128$, i.e. the DC-cost of the factorized \HCtree{} clustering both copies according to $T$ simultaneously. }\label{fig:max-well-behave}
+\end{figure}
+
+We have argued that any bipartite graph is max-well-behaved, but this is not the case for all $H$. 
+For a simple example, in Figure 1 we see that complete split graphs are not max-well-behaved. 
+In this paper, as a spin-off of our NP-completeness proof, we initiate the study of well-behaved graphs. We introduce a normalization procedure that makes incremental changes to a given HC-tree of some $H^{(k)}$, while observing monotonicity in the DC-cost, to arrive at a new HC-tree showing that $H$ is well-behaved. We employ this to show that the prism graph (the complement of a 6-cycle) is max-well-behaved, and thus $C_6$ min-well-behaved, establishing  the aforementioned NP-completeness along the way. 
+
+\section{Preliminaries}
+We use standard graph-theoretic notation \cite{Die05}. 
+A hierarchical clustering of a similarity graph $G = (V,E)$ is a full rooted binary tree $T$, together with a bijection $\delta$ from $V$ to $L(T)$, the set of leaves of $T$. We call such a pair $(T, \delta)$ an HC-tree of $G$. For a node $t$ of $T$ we denote by $T[t]$ the subtree of $T$ rooted at $t$.
+The Dasgupta cost function \cite{Das16} is this (lca means least common ancestor):
+$$\DCcost(G,(T,\delta)) = \sum_{uv\in E}w(uv)\cdot|L(T[x])|:x\text{ is the lca of }\delta(u)\text{ and }\delta(v)$$
+and an HC-tree of minimum DC-cost (under Dasgupta's objective function) is thus an HC-tree $(T^*,\delta^*)$ that minimizes DC-cost. 
+%The intuition behind this objective is clear: In any form of clustering, we want similar items (i.e. adjacent vertices) to appear in some cluster that does not include less similar items. In a hierarchical clustering, we must eventually split every vertex apart, but minimizing this function should ensure that heavy edges and/or dense subgraphs are split apart at the very end.
+
+Dasgupta shows that any HC-tree with minimum weight for graph $G$ is also an HC-tree with maximum weight for its complement $\overline{G}$.
+%XTOF: the previous sentence corresponds to Corollary 1. I would remove it.
+%, so maximizing the cost function is equally hard as minimizing it (\cite{Das16}, Section 4.1) in the general case. 
+We consider only unweighted graphs, equivalently $w(uv)=1$ for all $uv \in E$ and $0$ otherwise. 
+%This can be seen as a very crude measure of the relationship between objects – either two items are similar, or they are not.\\
+%The following notation is related to subtrees of an HC-tree $(T,\delta)$ and the subgraphs of $G$ induced by these subtrees.\\
+%Let $G$ be any unweighted graph, and $(T,\delta)$ a hierarchical clustering of $G$. 
+For any node $t\in T$, we define $G_{(T,\delta)}[t]$ as the subgraph of $G$ induced by $\delta^{-1}(L(T[t]))$, the vertices of $G$ mapped to leaves in $T[t]$.
+%, or more formally $$G_{(T,\delta)}[t] = G[\{\delta^{-1}(s):s\in L(T[t])\}]$$ where $G[S]$ is the \emph{induced subgraph} of $G$ on vertex set $S$. 
+Similarly, for any two nodes $t_1,t_2\in T$ with $L[t_1]\cap L[t_2] = \emptyset$, we define $G_{(T,\delta)}[t_1,t_2]$ 
+as the bipartite subgraph of $G$ consisting of all edges with one endpoint in  $\delta^{-1}(L(T[t_1]))$ and the other endpoint in $\delta^{-1}(L(T[t_2]))$.
+%= G[V(G_{(T,\delta)}[t_1]),V(G_{(T,\delta)}[t_2])]$$
+%where $G[S_1,S_2]$ is the \emph{induced bipartite subgraph} of $G$ on disjoint vertex sets $S_1,S_2$. We will always assume that $t_1$ and $t_2$ are siblings in $T$, but in principle, they do not have to be.
+If $(T,\delta)$ is inferred from context, we further shorten these to $G[t]$ and $G[t_1,t_2]$.
+%For any internal node $t$ in $T$, we arbitrarily place its children at the left or right side of $t$. We will consistently call the children of $t$ $c_l$ and $c_r$.\\
+We can now simplify the Dasgupta cost function on unweighted graphs as follows:
+$$\DCcost(G,(T,\delta)) = \sum_{t\in V(T)\backslash L(T)} |V(G[t])|\cdot|E(G[c_l,c_r])|:c_l,c_r\text{ children of }t$$
+
+%That is, for some induced subgraph $G_{(T\delta)}[t]$, we split this graph into two parts (the subgraphs induced by the children of $t$) and then count the edges of $G$ that are \emph{cut} at this split, i.e. the number of edges in the induced bipartite subgraph induced by the children of $T$.
+%Throughout this paper, we will consider the problem of finding optimal clusterings of unweighted graphs as a purely combinatorial one, not necessarily restricting our view to inputs that are likely to be found in practical applications.\\
+
+We start with a simple but useful fact.
+%XTOF: the next property is also in DASGUPTA paper (beginning of the proof that minizing is equivalent to maximizing. We should put a reference.
+%XTOF: are the proofs of these two known properties something we want to save for the EA ? pro: it is a training for the reader / cons: it costs space. I would move the proofs to appendix.
+
+\begin{property}\label{Fact:EdgeDisjSum}
+Let $G,G'$ be two edge-disjoint graphs over the same vertex set $V(G)$, and $(T,\delta)$ an HC-tree of $V$. The DC-cost of the decomposition on their union $G^U = (V(G),E(G)\cup E(G'))$ is the sum of the costs on each graph:
+$$\DCcost(G^U,(T,\delta)) = \DCcost(G,(T,\delta))+\DCcost(G',(T,\delta))$$
+\end{property}
+
+\begin{proof}
+The cost of $(T,\delta)$ on $G^U$ is simply the sum, over every edge $e\in E(G^U)$, of the size (i.e. number of vertices) of the subgraph in which $e$ is cut. This is the same as adding together the sums over every edge in $G$ and every edge in $G'$.
+\end{proof}
+
+\begin{corollary}[\emph{\cite{Das16}, Section 4.1}]\label{Lemma:MinMaxEquiv}
+An HC-tree of $G$ with minimum DC-cost is also an \HCtree{} of $\overline{G}$ with maximum DC-cost.
+\end{corollary}
+
+\begin{proof}
+$\overline{G}$ is by definition edge-disjoint from $G$, therefore 
+$\DCcost(G^U,(T,\delta)) = \\ \DCcost(G,(T,\delta))+\DCcost(\overline{G},(T,\delta))$
+by Property \ref{Fact:EdgeDisjSum}. But the union of $G$ and $\overline{G}$ is isomorphic to $K_n$ where $n=|V(G)|$, and we know that every \HCtree{} of $K_n$ has the same cost, namely $\frac{1}{3}(n^3-n)$ (\cite{Das16}, Theorem 3). Therefore, for any \HCtree{} $(T,\delta)$,
+$\DCcost(\overline{G},(T,\delta)) = \frac{1}{3}(n^3-n)-\DCcost(G,(T,\delta))$.
+We conclude that a \HCtree{} of $G$ with minimum cost is a \HCtree{} of $\overline{G}$ with maximum cost, and vice versa.
+\end{proof}
+
+\section{Well-behaved Graphs}\label{Sct:MaxCost}
+
+Minimizing DC-cost of a graph is accomplished by the exact same HC-trees that maximize DC-cost for the complement graph. However, for specific graph classes, like bipartite graphs, it can be easy to find an HC-tree maximizing the DC-cost but hard to minimize the DC-cost, or vice-versa.
+%Although maximizing and minimizing the cost of a hierarchical clustering is equally hard in the general case, it is easy to find classes of graphs that are dramatically easier to maximize than to minimize, and vice versa. Take for example the bipartite graphs: Let $G$ be a bipartite graph with color classes $X$ and $Y$, and let $n$ and $m$ be the number of vertices and edges in $G$, respectively. Any \HCtree{} $(T,\delta)$ that splits $V(G)$ into $X$ and $Y$ at the root clearly has the maximum possible cost $nm$. On the other hand, we can find no evidence that minimizing the cost of $G$ is any easier than minimizing the cost of any arbitrary graph.\\
+%An example of a similar flavor is this: Given $G^{(k)}$, consisting of $k$ disjoint copies of some (small) graph $G$, let's call them $G_1,\ldots,G_k$, and an optimal (i.e. minimum or maximum) \HCtree{} $(T,\delta)$ of $G$, is it easy to make an optimal (i.e. minimum or maximum) \HCtree{} of $G^{(k)}$? In the case of minimizing, the answer is definitely yes: Lemma 2 of \cite{Das16} states that any minimum \HCtree{} of $G^{(k)}$ first must split apart its connected components. Since we have been given a minimum \HCtree{} $(T,\delta)^-$ of $G$, it is easy to make a \HCtree{} $(T,\delta)^{(k)-}$ that contains $k$ nodes $t_1,\ldots,t_k$ such that $G^{(k)}[t_i] = G_i$ for every $i$, and then copy $(T,\delta)^-$ into every $t_i$. If $\DCcost(G,(T,\delta)^-) = W^-$, then $\DCcost(G^{(k)},(T,\delta)^{(k)}) = kW^-$.\\
+Let us consider a very simple operation to construct sparse graphs. Take $G^{(k)}$, consisting of $k$ disjoint copies of some graph $G$. If we are given an HC-tree $T$ for $G$ of minimum DC-cost then any HC-tree for $G^{(k)}$ hierarchically clustering each copy of $G$ as done in $T$ will have minimum DC-cost.
+However, maximizing the DC-cost for $G^{(k)}$ seems harder. Given an HC-tree $T$ of maximum DC-cost for $G$ we call any HC-tree for $G^{(k)}$ that hierarchically clusters each copy of $G$ as in $T$ a factorized \HCtree{}. Let us define this formally:
+
+\begin{definition}[Factorized \HCtree]
+Let $G$ be a graph, $(T,\delta)$ an HC-tree of $G$ of maximum DC-cost $W$, and $k$ a natural number. A \emph{factorized \HCtree} $(T,\delta)^{(k)}$ of the graph $G^{(k)}$ is made as follows: Make a copy of $(T,\delta)$ and for every node $t$, make
+$$G^{(k)}_{(T,\delta)^{(k)}}[t] = \bigcup_{i=1}^k G_{(T,\delta)}[t]$$
+This is not a complete \HCtree{}, since for $t\in L(T)$, $G^{(k)}[t]$ is not a single vertex, but $k$ vertices. But these $k$ vertices are all disjoint, therefore any extension of this partial \HCtree{} will have the same DC-cost $k^2W$ and be regarded as a factorized \HCtree{}. 
+\end{definition}
+
+As previously mentioned, if $G$ is bipartite then for any $k$ the factorized \HCtree{} for $G^{(k)}$ will have max DC-cost. We give this property a name.
+%The quality that the factorized clustering is optimal for any $G^{(k)}$ is advantageous in that we easily can make an optimal (i.e. maximum) clustering for the "big" graph $G^{(k)}$ if we know an optimal clustering for the "small" graph $G$. We give it a name:
+
+\begin{definition}[Well-behaved graph]
+Let $G$ be an unweighted graph, and $W$ the maximum DC-cost over HC-trees of $G$. We call $G$ \emph{max-well-behaved}, or just \emph{well-behaved} if, for any natural number $k$, the maximum Dasgupta cost over HC-trees of the graph $G^{(k)}$ is equal to $k^2W$. The complementary graph $\overline{G}$ is called \emph{min-well-behaved}.
+\end{definition}
+
+So any bipartite graph $G$ is well-behaved and thus computing the max DC-cost of any $G^{(k)}$ can be reduced to computing the max DC-cost of $G$, or equivalently, computing the min DC-cost of $\overline{G^{(k)}}$ (the \emph{join} of $k$ copies of $\overline{G}$) reduces to computing the min DC-cost of $\overline{G}$. We may naturally ask: Is every graph well-behaved?  On the contrary, counterexamples abound, even for very small graphs, see Figure \ref{fig:max-well-behave} for an example.
+%: Let a complete split graph be denoted $Q_{i,j}$ where $i$ is the size of the clique and $j$ is the size of the independent set. Whenever $1 < i < j$, then such a graph is not well-behaved. An example: the smallest such graph $Q_{2,3}$ has maximum Dasgupta cost $W^+ = 32$, but a clustering of two copies of $Q_{2,3}$ with cost $130 > 2^2W^+$ is easily made by "flipping" the clustering of one copy. See Figure \ref{fig:max-well-behave}.
+
+
+%For example, take a complete split graph $H$, consisting of a clique $C$ and a stable set $I$ and a complete bipartite graph joining $C$ and $I$. If $1 < |C| < |I|$ then $H$ is not max-well-behaved. Already for two copies of this graph it is better to have the root cluster the clique of one copy and the stable set of the other copy together on separate sides, as this will give a balanced partition with $|C|+|I| > 2|C|$ vertices on each side so that subsequent splits of the edges in the two cliques both contribute higher DC-costs. In an optimal tree for this graph each clique should then be clustered by a caterpillar, with all stable set vertices below the lowest clique node (see Figure~\ref{fig:max-well-behave}).
+
+%\begin{figure}[t]
+%\centering
+%\begin{tikzpicture}
+%[innernode/.style={circle,draw=black,fill=black,inner sep=0pt,minimum size=1mm},
+%leaf1/.style={circle,draw=blue,fill=blue,inner sep=0pt,minimum size=1.5mm},
+%leaf2/.style={circle,draw=red,fill=red,inner sep=0pt,minimum size=1.5mm}]
+
+
+%%-------------------------------------------------
+%\node [black] at (-10.5,-3.5) {$Q_{2,3}$};
+
+%\node (i1) at (-11.1,-1) [leaf1] {} ;
+%\node (i2) at (-11.1,-1.8) [leaf1] {} ;
+%\node (i3) at (-11.1,-2.6) [leaf1] {} ;
+%\node (c1) at (-9.9,-1.4) [leaf2] {} ;
+%\node (c2) at (-9.9,-2.2) [leaf2] {} ;
+
+%\draw [-] (c1) to (c2);
+
+%\foreach \x in {1,2,3}{
+%	\foreach \y in {1,2}{
+%		\draw [-] (i\x) to (c\y) ;
+%		\node [red,right] at (c\y.east) {$c_{\y}$};
+%		}
+%	\node [blue,left] at (i\x.east) {$s_{\x}~$};
+%	}
+
+%%-------------------------------------------------
+%\node [black] at (-7+0.25,-3.5) {$T$};
+
+%\node (y0) at (-7+0.25,-1) [innernode] {} ;
+%\node (y1) at (-8+0.25,-1.5) [innernode] {} ;
+%\node (y2) at (-6+0.25,-1.5) [innernode] {} ;
+%\node (y3) at (-8.5+0.25,-2) [innernode] {} ;
+
+%\draw [-] (y0) to (y1);
+%\draw [-] (y0) to (y2);
+%\draw [-] (y1) to (y3);
+
+%\foreach \x in {1,2}{
+%	\node (t\x) at (-7+0.25-\x,-2.5) [leaf1] {} ;
+%	\node [blue,below] at (t\x.south) {$s_{\x}$};
+%}
+
+%\node (t3) at (-7.5+0.25,-2) [leaf1] {} ;
+%	\node [blue,below] at (t3.south) {$s_3$};
+
+
+%\draw [-] (y3) to (t1);
+%\draw [-] (y3) to (t2);
+%\draw [-] (y1) to (t3);
+
+%\foreach \x in {1,2}{
+%	\node (u\x) at (-7.5+0.25+\x,-2) [leaf2] {} ;
+%	\node [red,below] at (u\x.south) {$c_{\x}$};
+%}
+
+%\draw [-] (y2) to (u1);
+%\draw [-] (y2) to (u2);
+
+
+%%-------------------------------------------------
+%\node [black] at (-2,-3.5) {$T'$};
+
+%\node (a0) at (-2,0) [innernode] {} ;
+%\foreach \x in {1,2,3,4}{
+%	\node (a\x) at (-\x/2-2,-\x/2) [innernode] {} ;
+%	\node (b\x) at (\x/2-2,-\x/2) [innernode] {} ;
+%	}
+
+%\foreach \x in {1,2}{
+%	\node (i\x) at (-4.75+\x/2,-2.5) [leaf1] {} ;
+%	\node [blue,below] at (i\x.south) {$s_{\x}$};
+%	}
+%\node (i3) at (-3.25,-2) [leaf1] {} ;
+%\node [blue,below] at (i3.south) {$s_3$};
+
+%\node (j1) at (-0.75,-2) [leaf1] {} ;
+%\node [blue,below] at (j1.south) {$s'_{1}$};
+%\foreach \x in {2,3}{
+%	\node (j\x) at (0.75-2+\x/2,-2.5) [leaf1] {} ;
+%	\node [blue,below] at (j\x.south) {$s'_{\x}$};
+%	}
+
+%\foreach \x in {1,2}{
+%	\node (c\x) at (-\x/2-2+1/4,-\x/2-1/2) [leaf2] {} ;
+%	\node [red,below] at (c\x.south) {$c'_{\x}$};
+%	\node (d\x) at (\x/2-2-1/4,-\x/2-1/2) [leaf2] {} ;
+%	\node [red,below] at (d\x.south) {$c_{\x}$};
+%	}
+
+%\foreach \x/\y in {0/1,1/2,2/3,3/4}
+%	\draw [-] (a\x) to (a\y);
+%\draw [-] (a0) to (b1) ;
+%\foreach \x/\y in {1/2,2/3,3/4}
+%	\draw [-] (b\x) to (b\y);
+
+%\foreach \x in {1,2}{
+%	\draw [-] (a\x) to (c\x);
+%	\draw [-] (b\x) to (d\x);
+%}
+
+%\draw [-] (i1) to (a4);
+%\draw [-] (i2) to (a4);
+%\draw [-] (i3) to (a3);
+%\draw [-] (j1) to (b3);
+%\draw [-] (j2) to (b4);
+%\draw [-] (j3) to (b4);
+
+%\end{tikzpicture}
+%\caption{The complete split graph $Q_{2,3}$
+%%, i.e. a complete bipartite graph between a clique of size 2 and a stable set of size 3,
+%is not max-well-behaved. We have $\DCcost(Q_{2,3},T)= 6 \times 5 + 1 \times %2 = 32$ which is the maximum possible. The HC-tree $T'$ of $Q_{2,3}^{(k)}$ %with $k=2$ (vertices $s_1,c_1,...$ in one copy and $s'_1,c'_1,...$ in the %other copy) satisfies $\DCcost(Q_{2,3}^{(k)},T')=130$ which is larger than %$\DCcost(Q_{2,3},T)\times k^2=128$ which is the DC-cost of the factorized %\HCtree{} clustering both copies according to $T$ simultaneously. %}\label{fig:max-well-behave}
+%\end{figure}
+
+How to show that some interesting non-bipartite graph $G$ is well-behaved? We need to show that for any value of $k$ no \HCtree{} of $G^{(k)}$ has higher DC-cost than the factorized \HCtree{}. We will show this by what we call a normalization procedure on HC-trees: starting with an arbitrary \HCtree{} we incrementally, step by step, modify it into the factorized \HCtree{} and show that at no step does the cost decrease. We formalize this notion:
+
+\begin{definition}[Safe operation]
+An operation that takes an \HCtree{} of a graph $G$ as input and outputs another \HCtree{} of the same graph is called {\em safe} (for maximization) if the DC-cost of the input is no larger than the DC-cost of the output.
+\end{definition}
+
+\begin{property}\label{Fact:ExistsProc}[Normalization Procedure]
+Let $G$ have max HC-tree $(T,\delta)$. If there is a procedure that for any $k$ takes as input any HC-tree of $G^{(k)}$, iteratively applies safe operations, and outputs a factorized \HCtree{} $(T,\delta)^{(k)}$ of $G^{(k)}$ then $G$ is well-behaved.
+\end{property}
+
+The prism $P$ is the graph on six vertices shown in Figure \ref{fig:prismvars}.
+It is non-bipartite, and its complement is a cycle.
+$P$ exhibits a high degree of symmetry (it is vertex-transitive), and thus has a limited number of non-isomorphic decompositions. The optimal \HCtree{} we will base our normalization procedure around is also shown in Figure \ref{fig:prismvars}, and has the maximum cost of 48 (note $P$ has also another optimal HC-tree{}). To be convinced that this is indeed optimal, note that in a minimum optimal \HCtree{} $(T,\delta)$ of its complement, every subgraph induced by a node in $T$ must be connected if the whole graph is connected.
+We
+will show in Section \ref{Sct:Proc} a normalization procedure for the prism as described in Property \ref{Fact:ExistsProc} to establish the following:
+
+\begin{lemma} \label{Lemma:PrismMax}
+The prism is max-well-behaved, and thus $C_6$ is min-well-behaved.
+\end{lemma}
+
+This result is non-trivial, and should be seen in light of e.g. the five-vertex graph in Figure \ref{fig:max-well-behave}, whose complement is a 3-cycle and two isolated vertices, that is not max-well-behaved.
+
+%\begin{figure}[ht!]
+%\centering
+%\includegraphics[width=0.8\textwidth]{ill/prismunlabelled}
+%\caption{The prism, and its top split in the optimal \HCtree{} (a "(3-3)-split")}
+%\label{fig:prism}
+%\end{figure}
+
+
+
+%Interestingly, there is one other way to split the prism that achieves the same cost; this is shown below.
+
+%\begin{figure}[H]
+%\centering
+%\includegraphics[width=0.4\textwidth]{ill/prism42}
+%\caption{A (4-2)-split, a hierarchical \HCtree{} with this as the top split also has cost 48}
+%\end{figure}
+
+
+\section{NP-Hardness for Unweighted Graphs}
+
+%Dasgupta proved in his paper that finding an optimal hierarchical clustering (minimum or maximum) of general (weighted) graphs is NP-hard (\cite{Das16}, Section 4), which is hardly surprising. We already know by Lemma \ref{Lemma:MinMaxEquiv} that minimizing and maximizing the cost is equally hard.
+Dasgupta shows that for edge-weighted graphs, finding an HC-tree of maximum DC-cost is NP-hard, by reduction 
+from an NP-complete problem he called NAESAT*:
+
+\begin{definition}[NAESAT*]
+We are given a boolean CNF formula where every clause contains either two or three literals (called "2-clauses" and "3-clauses", respectively), and every variable appears in exactly one 3-clause, and in exactly two 2-clauses with one appearance positive and the other negative. Moreover, no 2-clause nor its copy with polarities reversed is part of any 3-clause. Is there a not-all-equal-satisfying assignment, i.e. one where every clause contains at least one true and one false literal?
+\end{definition}
+
+
+
+%If there exists a 2-clause whose literals also appear in a 3-clause, then it is redundant and can be removed.
+%The same holds if the 3-clauseC′contains the two literals ofCwith polarity reversed.  This is because(x∨y) is not-all-equal satisfied if and only if (x∨y) is not-all-equal satisfied.
+%Any clause that contains both a literal and its negation can
+%Moreover, no 2-clause $(x \vee y)$ nor its copy with polarities reversed $(\overline{x} \vee \overline{y})$ is part of any 3-clause.
+
+Dasgupta first gave a simple reduction from NAE3SAT, where every clause has exactly 3 literals but there is no restriction on how many times each variable appears in the formula, to NAESAT*. In that reduction it follows trivially that no 2-clause nor its copy with polarities reversed will be contained in a 3-clause, so we have included that property in our definition of NAESAT*.
+We will assume, as Dasgupta \cite{Das19} does, that if there is a 2-clause $C$ whose literals also appear in a 2-clause $C'$, but with reversed polarity, then $C'$ is removed.
+
+%The following fact is crucial to our later observations:
+%\begin{property} \label{fact:NAESubs}
+%There is no NAESAT*-instance reduced from a NAE3SAT-instance in which a 2-clause or its opposite is contained in a 3-clause.
+%\end{property}
+%Therefore, the problem of finding Not-All-Equal-satisfying assignments to this subset of NAESAT* is also NP-complete.
+
+
+Dasgupta's reduction to hierarchical clustering takes as input a NAESAT* formula $\varphi$ on $n$ variables with $m=\frac{1}{3}n$ 3-clauses and $m'\leq n$ 2-clauses, and constructs a graph $G$ with two vertices for each variable $x$ appearing in the formula $\varphi$: one corresponding to $x$ and one to $\overline{x}$. For every 2-clause $(\tilde{x}\vee\tilde{y})$, where a variable with a tilde above, $\tilde{x}$, is shorthand for "$x$ or $\overline{x}$", he adds an edge between $\tilde{x}$ and $\tilde{y}$, and also between $\overline{\tilde{x}}$ and $\overline{\tilde{y}}$ (these $2m'$ edges are called the \emph{2-clause edges}). For every 3-clause $(\tilde{x}\vee\tilde{y}\vee\tilde{z})$, he adds a triangle between $\tilde{x}$, $\tilde{y}$ and $\tilde{z}$, and also between $\overline{\tilde{x}}$, $\overline{\tilde{y}}$ and $\overline{\tilde{z}}$ (these $6m$ edges are called the \emph{3-clause edges}). In addition, he adds one edge between $x$ and $\overline{x}$ for every variable (these $n$ edges are called the \emph{matching edges}). He shows that $\varphi$ is in NAESAT* if and only if $G$ has {\em weighted} DC-cost at least $M$ (for some fixed $M$ that we do not specify here). Let us see how this comes about. Given a not-all-equal assignment of truth values to the $n$ variables of $\varphi$, he constructs an HC-tree of $G$ 
+by first splitting $V(G)$ evenly at the root into True literals and False literals and then  splitting all remaining edges at the next level.
+%as follows:
+%\begin{enumerate}
+%\item Split $V(G)$ evenly at the root into True literals and False literals. 
+%\item Split all remaining edges at the next level.
+%\end{enumerate}
+
+This \HCtree{} cuts all $n$ matching edges at the top since $x$ and $\overline{x}$ have opposite truth values. Since the assignment is not-all-equal satisfying all $2m'$ 2-clause edges are cut at the top, and also $4m$ of the $6m$ 3-clause edges are cut at the top. Thus $4m+2m'+n$ are cut at the top. The remaining $2m$ 3-clause edges are all disjoint, without sharing any endpoints, and can thus be cut in one single split at the level below the root. Dasgupta in his reduction gives a high weight to the matching edges (specifically, the matching edges have weight $2nm+1$) to ensure that any HC-tree of weighted DC-cost $M$ will be a tree that cuts all matching edges at the top. Note that an HC-tree cutting all matching edges at the top will naturally define a truth assignment to the variables of the formula. We will show the same result even when all edges have unit weight; this will imply the following:
+
+\begin{theorem}
+Hierarchical clustering of unweighted graphs is NP-hard.
+\end{theorem}
+
+\begin{proof}
+Let the graph $G$ constructed by the Dasgupta reduction when given $\varphi$ be unweighted. What is then the cost of the HC-tree described above on $G$, given some not-all-equal assignment of the underlying Boolean formula $\varphi$? As described above, in $G$ there are $4m+2m'+n$ edges that are cut at the top and each receive a cost of $2n$, and $2m$ edges that are split at the next level and each receive a cost of $n$. The total cost is thus $W^*=10nm+4nm'+2n^2$. We have already argued that if $\varphi$ is not-all-equal-satisfiable then DC-cost of $G$ is at least $W^*$, but now we need to argue the converse. If we restrict to HC-trees that split $V(G)$ into two equally big parts, then we see that $W^*$ is the maximum possible and it can only be reached if the resulting assignment is not-all-equal satisfying. This is because it will have to cut all matching edges at the top and furthermore there is no way to cut more than two edges of a triangle in a single split.
+
+It remains to show that an HC-tree not splitting $V(G)$ evenly at the top will have DC-cost less than $W^*$. To this purpose, we partition the edges of $G$ into two subgraphs $G'$ and $G''$, with $G'$ being the graph containing only the $2m'$ 2-clause edges, and $G''$ containing the 3-clause edges and matching edges. We observe that the 3-clause edges comprise $2m$ disjoint triangles, and that the matching edges bind together pairs of triangles, as shown in Figure \ref{fig:prismvars}. This means that $G''$ is a collection of $m$ disjoint prisms.
+The graph $G'$ is also easy to describe; every variable appears in either one or two 2-clauses. It will belong to a single 2-clause when there was a 2-clause $C$ whose literals also appeared with reversed polarity in a 2-clause $C'$ and $C'$ was removed, otherwise it will belong to two 2-clauses.
+%, and  if $\varphi$ contains two 2-clauses of the type $(\tilde{x}\vee\tilde{y}),(\overline{\tilde{x}}\vee\overline{\tilde{y}})$ then we have an isolated edge, 
+Thus $G'$ will be a collection of  disjoint components that are 
+1-regular (single edges) or 
+2-regular (cycles). Since $G'$ is a collection of edges and cycles it is easy to see that no HC-tree whose root is an uneven split can cut all its $2m'$ edges at the top.
+From Property \ref{Fact:EdgeDisjSum} we know that
+for an HC-tree $(T,\delta)$ of $G$ we have
+ $\DCcost(G,(T,\delta))=\DCcost(G',(T,\delta))+ \DCcost(G'',(T,\delta))$. Thus, for an uneven \HCtree{} $(T,\delta)$ of $G$ to have cost at least $W^*$, then $\DCcost(G'',(T,\delta)')$ must be strictly higher than $W^*-4nm'$ since $G'$ would contribute less than $4nm'$. By the equality $n=3m$, we get 
+$$W^*-4nm' = 10mn+2n^2 = 30m^2+18m^2 = 48m^2$$
+ so that $G''$ must contribute more than $48m^2$. But our main Lemma \ref{Lemma:PrismMax} showing that the prism is well-behaved, implies that $48m^2$ is the maximum cost achievable for $G''$ being $m$ copies of the prism. It must then be the case that there is no uneven \HCtree{} of $G$ with cost at least $W^*$.
+
+We conclude that there exists an HC-tree of $G$ with weight at least $10nm+4nm'+2n^2$ if and only if the underlying Boolean formula is not-all-equal satisfiable.
+\end{proof}
 
 \begin{figure}[ht!]
 \centering
-	\begin{subfigure}{.48\textwidth}
-		\centering
-		\includegraphics[width=\linewidth]{sinkhorn}
-		\caption{Comparison with Sinkhorn iteration.}
-		\label{fig:sub1}
-	\end{subfigure}
-	\begin{subfigure}{.48\textwidth}
-		\centering
-		\includegraphics[width=\linewidth]{apdamd}
-		\caption{Comparison with APDAMD \cite{LinHJ19}.}
-		\label{fig:sub2}
-	\end{subfigure}
-\label{fig:experiments}
+\includegraphics[width=\textwidth]{ill/prism.pdf}
+\caption{The prism $P$, made from 3-clause edges and matching edges. By our definition of NAESAT*, every 3-clause in $\varphi$ is represented in $G$. To the middle and right, one possible HC-tree of $P$ with maximum DC-cost, and the top split of this tree.}
+\label{fig:prismvars}
 \end{figure}
 
-While our unoptimized algorithm performs poorly, slightly optimizing the size of the regularizer and step sizes used results in an algorithm with competitive performance to APDAMD, the first-order method with the best provable guarantees and observed practical performance. Sinkhorn iteration outperformed all first-order methods experimentally; however, an optimized version of our algorithm performed better than conservatively-regularized Sinkhorn iteration, and was more competitive with variants of Sinkhorn found in practice than other first-order methods.
+%\section{Questions and Problems}
 
-As we discuss in our implementation details (Appendix~\ref{app:experiment_details}), we acknowledge that implementations of our algorithm illustrated are not the same as those with provable guarantees in our paper. However, we believe that our modifications are justifiable in theory, and consistent with those made in practice to existing algorithms. Further, we hope that studying the modifications we made (step size, using mirror prox \cite{Nemirovski04} for stability considerations), as well as the consideration of other numerical speedups such as greedy updates \cite{AltschulerWR17} or kernel approximations \cite{AltschulerBRW18}, will become fruitful for understanding the potential of accelerated first-order methods in both the theory and practice of computational optimal transport.
+\section{The Normalization Procedure} \label{Sct:Proc}
+We give a normalization procedure for $G=P^{(k)}=P_1\cup P_2\cup\ldots\cup P_k$ consisting of $k$ disjoint copies of the prism $P$. This procedure takes as input an HC-tree for $G$, performs a series of safe operations, and outputs a factorized \HCtree{} where every prism is clustered according to the evenly balanced HC-tree $T$ in Figure \ref{fig:prismvars}.
+We could have done this naively by a single Bottom-Up traversal of the tree, performing some PowerfulBalancing operation on each node $t$ of the tree. For every possible split of a subgraph of a prism at node $t$, PowerfulBalancing would have to perform a safe operation that changes this split into one that is closer to the desired end goal. 
+However, the number of subgraphs of a prism, and the number of distinct splits of these subgraphs is very high, 11 and 83 respectively. Thus the naive PowerfulBalancing is not a practical option to try and prove that the prism is well-behaved. Instead, our normalization procedure will lower the number of distinct subgraphs and splits of these subgraphs that appear in a node of the tree before doing the Balancing.  In total, we employ 3 subroutines at each node $t$ of the tree: 
+\begin{itemize}
+    \item Cut Optimization: ensures that every sub-prism split at $t$ involves one of the 6 subgraphs given in Figure \ref{fig:optsub} and is split according to one of 8 specific splits plus 6 distinct mirror-images.
+    %XTOF: I would tell that this is done by identifying safe vertex exchanges
+    \item Left-Heavy Distribution: ensures that no sub-prism split at $t$ has the subgraph in the right child bigger than the one in the left child,  restricting to the 8 distinct splits; Figure \ref{fig:optsplit} depicts these splits.
+    \item Balancing: ensures that every sub-prism split at $t$ is split as evenly as possible
+\end{itemize}
+The normalization procedure will make 2 traversals of the tree: the first is a Top-Down traversal that will perform Cut Optimization on each node, the second is a Bottom-Up traversal that on each node will perform Left-Heavy Distribution followed by Balancing.
 
-
-FILE NAME: extragradient_proofs.tex
-
-\section{Missing proofs from Section~\ref{sec:extragradient}}
-\label{app:extragradient}
-
-In this section, we state missing proofs from Section~\ref{sec:extragradient}. We provide the efficient implementation of the proximal steps required by Algorithm~\ref{alg:dualex} in Appendix~\ref{ssec:altmin}.
-
-\restateDualEx*
-\begin{proof}
-	Our first step is to prove the following inequality:
-	%
-	\begin{equation}
-	\label{eq:mainclaim}
-	\frac{1}{2\kappa} \inprod{g(w_t)}{w_t - \bar{z}} \leq \inprod{s_{t + 1}}{z_{t + 1} - \bar{z}} + V^r_{\bar{z}}(z_{t + 1}) - \inprod{s_t}{z_t - \bar{z}} - V^r_{\bar{z}}(z_t).
-	\end{equation}
-	%
-	Let $c_t = \frac{z_t + w_t + z_{t + 1}}{3}$. The proof follows from minimality of $z_t$ with respect to $c_t$, minimality of $w_t$ with respect to $z_{t + 1}$, and area-convexity \eqref{eq:areaconvex} with respect to $z_t$, $w_t$, and $z_{t + 1}$. Respectively,
-	%
-	\begin{equation}
-	\label{eq:dexproof}
-	\begin{aligned}
-	\inprod{s_t}{z_t} + r(z_t) &\leq \inprod{s_t}{c_t} + r(c_t) \\
-	\inprod{s_t}{w_t} + \frac{1}{\kappa}\inprod{g(z_t)}{w_t} + r(w_t) &\leq \inprod{s_t}{z_{t + 1}} + \frac{1}{\kappa}\inprod{g(z_t)}{z_{t + 1}} + r(z_{t + 1}) \\
-	\frac{1}{\kappa}\inprod{g(w_t) - g(z_t)}{w_t - z_{t + 1}} &\leq r(z_t) + r(w_t) + r(z_{t + 1}) - 3r\left(c_t\right).
-	\end{aligned}
-	\end{equation}
-	%
-	Substituting the first equation into the third and using the definition of $c_t$, we have
-	%
-	\begin{equation*}
-	\frac{1}{\kappa}\inprod{g(w_t) - g(z_t)}{w_t - z_{t + 1}} \leq r(w_t) + r(z_{t + 1}) - 2r(z_t) + \inprod{s_t}{w_t + z_{t + 1} - 2z_t}.
-	\end{equation*}
-	%
-	Rearranging the second equation, we have
-	%
-	\begin{equation*}
-	\frac{1}{\kappa}\inprod{g(z_t)}{w_t - z_{t + 1}} \leq r(z_{t + 1}) - r(w_t) + \inprod{s_t}{z_{t + 1} - w_t}.
-	\end{equation*}
-	%
-	Adding these two equations, we have
-	%
-	\begin{equation*}
-	\frac{1}{\kappa}\inprod{g(w_t)}{w_t - z_{t + 1}} \leq 2r(z_{t + 1}) - 2r(z_t) + \inprod{s_t}{2z_{t + 1} - 2z_t}.
-	\end{equation*}
-	%
-	Dividing by 2 and adding $\frac{1}{2\kappa}\inprod{g(w_t)}{z_{t + 1} - \bar{z}}$ to both sides, we obtain the desired \eqref{eq:mainclaim}. Now, define the potential function
-	%
-	\begin{equation*}
-	\Phi_k = \frac{1}{2\kappa}\sum_{t = 0}^{k - 1} \inprod{g(w_t)}{w_t - \bar{z}} - \inprod{s_k}{z_k - \bar{z}} - V^r_{\bar{z}}(z_{k})
-	\end{equation*}
-	%
-	Then, by \eqref{eq:mainclaim}, $\Phi_k$ is nonincreasing in $k$. Therefore for any $u$, by the definition of $\Theta$,
-	%
-	\begin{align*}
-	\frac{1}{T} \sum_{t = 0}^{T - 1}\inprod{g(w_t)}{w_t - u} &\leq \frac{1}{T} \sum_{t = 0}^{T - 1}\inprod{g(w_t)}{w_t - \bar{z}} + \frac{1}{T} \sum_{t = 0}^{T - 1}\inprod{g(w_t)}{\bar{z} - u} + \left(\frac{2\kappa\Theta}{T} - \frac{2\kappa V_{\bar{z}}(u)}{T}\right) \\
-	&\leq \frac{1}{T} \sum_{t = 0}^{T - 1}\inprod{g(w_t)}{w_t - \bar{z}} + \frac{1}{T} \sum_{t = 0}^{T - 1}\inprod{g(w_t)}{\bar{z} - z_T} + \left(\frac{2\kappa\Theta}{T} - \frac{2\kappa V_{\bar{z}}(z_T)}{T}\right) \\
-	&= \frac{2\kappa}{T} \Phi_T + \frac{2\kappa\Theta}{T} \leq \frac{2\kappa}{T} \Phi_0 + \frac{2\kappa\Theta}{T} = \frac{2\kappa\Theta}{T}.
-	\end{align*}
-	%
-	The inequality on the second line used the definition of $z_T = \prox^r_{\bar{z}}\left(\frac{1}{2\kappa}\sum_{t \in [T - 1]} g(w_t)\right)$, and the last inequality is  $\Phi_T \leq \Phi_0$. The conclusion follows from the definition of $g$ (because it is linear).
-\end{proof}
-
-\restateDualExEps*
-\begin{proof}
-	We see that \eqref{eq:mainclaim} now holds up to $\epsilon'$ additive error, so that $\Phi_k$ is increasing by at most $\epsilon'$ each step. Thus, we obtain $\Phi_T \leq \Phi_0 + T\epsilon'$, yielding the conclusion.
-\end{proof}
-
-\restateAreaConvexity*
-
-\begin{proof}
-	We scale both $r$ and $J$ down by $2\dmax$, which does not affect positive-semidefiniteness. By computation we have (recalling all columns of $A$ have $\ell_1$ norm of 2)
-	%
-	\begin{equation*}
-	\nabla^2 r(x, y) = \begin{pmatrix}
-	5 \norm{A_{:j}}_1 \diag{\frac{1}{x_j}} & 2 A^\top \diag{y_i} \\
-	2 \diag{y_i} A & 2 \diag{A_i^\top x} \\
-	\end{pmatrix}.
-	\end{equation*}
-	%
-	It suffices to show that for any vector $\begin{pmatrix} a & b & c & d \end{pmatrix}$ we have
-	%
-	\begin{equation*}
-	\begin{pmatrix} a & b & c & d \end{pmatrix}
-	\begin{pmatrix}
-	5 \norm{A_{:j}}_1 \diag{\frac{1}{x_j}} & 2 A^\top \diag{y_i} & 0 & -A^\top \\
-	2 \diag{y_i} A & 2 \diag{A_i^\top x} & A & 0 \\
-	0 & A^\top & 5 \norm{A_{:j}}_1 \diag{\frac{1}{x_j}} & 2 A^\top \diag{y_i} \\
-	-A & 0 & 2 \diag{y_i} A & 2 \diag{A_i^\top x}
-	\end{pmatrix}
-	\begin{pmatrix}
-	a \\ b \\ c \\ d
-	\end{pmatrix} \geq 0.
-	\end{equation*}
-	%
-	Upon simplifying and gathering like terms, it suffices to show
-	%
-	\begin{equation*}
-	\sum_{i, j} A_{ij}\left(\frac{5a_j^2}{x_j} + 4 a_j b_i y_i + 2 b_i^2 x_j - 2 a_j d_i + 2 c_j b_i + \frac{5 c_j^2}{x_j} + 4 c_j d_i y_i + 2 d_i^2 x_j \right) \geq 0.
-	\end{equation*}
-	%
-	However, this is true for $y_i \in [-1, 1]$, since each coefficient groups into clearly nonnegative terms,
-	%
-	\begin{align*}
-	\left(\frac{4a_j^2}{x_j} + 4 a_j b_i y_i + b_i^2 x_j \right) + \left(\frac{a_j^2}{x_j} - 2 a_j d_i + d_i^2 x_j\right) + \left(\frac{4 c_j^2}{x_j} + 4 c_j d_i y_i + d_i^2 x_j \right) + \left(\frac{c_j^2}{x_j} + 2 c_j b_i + b_i^2 x_j \right).
-	\end{align*}
-	%
-\end{proof}
-
-\subsection{Alternating Minimization Analysis}
-\label{ssec:altmin}
-
-In this section, we give the convergence analysis of an alternating minimization procedure for minimizing a function of the form (throughout this section, $r(x, y)$ is as in \eqref{eq:shermanreg})
-%
-\begin{equation}
-\label{eq:proxfunction}
-f(x, y) \defeq \inprod{\xi}{x} + \inprod{\eta}{y} + r(x, y)
-\end{equation}
-%
-which is the type of minimization problem arising from steps of the form $\prox^r_{\bar{z}}(g)$. As we will see, $f(x, y)$ is jointly convex. Throughout this section, let $x_{\opt}, y_{\opt}$ be the minimizer to $f$. Corollary~\ref{corr:dualex} states that $O(\epsilon)$ additive error to $f$ gives the same asymptotic convergence rate in Algorithm~\ref{alg:dualex}. We will show that a simple alternating minimization scheme enjoys a linear rate of convergence in our setting; thus, roughly $O(\log \epsilon^{-1})$ iterations suffice. We first give a proof of a general condition which suffices for linear convergence.
-
-\begin{lemma}
-	\label{lem:altminprog}
-	Suppose $f(x, y)$ is twice-differentiable and jointly convex, over the product space $\mathcal{X} \times \mathcal{Y}$. Consider the alternating minimization scheme,
-	%
-	\begin{enumerate}
-		\item $x_{k + 1} \defeq \textup{argmin}_{x \in \mathcal{X}} f(x, y_k)$
-		\item $y_{k + 1} \defeq \textup{argmin}_{y \in \mathcal{Y}} f(x_{k + 1}, y)$
-	\end{enumerate}
-	%
-	Further, suppose there are convex regions $\mathcal{X}_{k + 1} \subseteq \mathcal{X}$,  $\mathcal{Y}_{k} \subseteq \mathcal{Y}$ which contain $x_{k + 1}, y_k$ respectively, such that for any $x' \in \mathcal{X}_{k + 1}$, $y', y'' \in \mathcal{Y}_{k}$, and for some $\sigma \geq 1$,
-	%
-	\begin{equation}
-	\label{eq:hessdom}
-	\nabla^2 f(x', y') \succeq \frac{1}{\sigma} \nabla^2_{yy} f(x_{k + 1}, y''),
-	\end{equation}
-	%
-	where $\nabla^2_{yy}$ is the Hessian with all but the $yy$ block zeroed out. Then, for any $x^* \in \mathcal{X}_{k + 1}$, $y^* \in \mathcal{Y}_k$,
-	%
-	\begin{equation*}
-	f(x_{k + 1}, y_k) - f(x_{k + 1}, y_{k + 1}) \geq \frac{1}{\sigma}\left( f(x_{k + 1}, y_k) - f(x^*, y^*)\right).
-	\end{equation*}
-	%
-\end{lemma}
-\begin{proof}
-	Let $\tilde{y} = \left(1 - \frac{1}{\sigma}\right) y_k + \frac{1}{\sigma} y^*$. We will prove instead that
-	%
-	\begin{equation*}
-	f(x_{k + 1}, y_k) - f(x_{k + 1}, \tilde{y}) \geq \frac{1}{\sigma}\left( f(x_{k + 1}, y_k) - f(x^*, y^*)\right),
-	\end{equation*}
-	%
-	from which the conclusion will follow since $f(x_{k + 1}, y_{k + 1}) \leq f(x_{k + 1}, \tilde{y})$. Note by definition of $\tilde{y}$, as well as optimality of $x_{k + 1}$ which implies $0 \geq \inprod{\nabla_x f(x_{k + 1}, y_k)}{x_{k + 1} - x^*}$,
-	%
-	\begin{equation}
-	\label{eq:firstorder}
-	\inprod{\nabla_y f(x_{k + 1}, y_k)}{y_k - \tilde{y}} = \frac{1}{\sigma}\inprod{\nabla_y f(x_{k + 1}, y_k)}{y_k - y^*} \geq \frac{1}{\sigma} \inprod{\nabla f(x_{k + 1}, y_k)}{z_{k + \half} - z^*}
-	\end{equation}
-	%
-	where $z_{k + \half} \defeq (x_{k + 1}, y_k)$ and $z^* \defeq (x^*, y^*)$. Further, let $y_{\alpha} \defeq (1 - \alpha) y_k + \alpha y^*$, $\tilde{y}_{\alpha} \defeq (1 - \alpha) y_k + \alpha \tilde{y}$, and $x_{\alpha} \defeq (1 - \alpha) x_{k + 1} + \alpha x^*$. Then, by Taylor expansion we have $f(x_{k + 1}, y_k) - f(x_{k + 1}, \tilde{y})$ equals
-	%
-	\begin{align*}
-	&\inprod{\nabla_y f(x_{k + 1}, y_k)}{y_k - \tilde{y}} - \int_0^1 \int_0^\beta (\tilde{y} - y_k)^\top \nabla^2_{yy} f(x_{k + 1}, \tilde{y}_{\alpha}) (\tilde{y} - y_k) d\alpha d\beta \\
-	\geq \;&\frac{1}{\sigma}\inprod{\nabla f(x_{k + 1}, y_k)}{z_{k + \half} - z^*} - \frac{1}{\sigma^2} \int_0^1 \int_0^\beta (y^* - y_k)^\top \nabla^2_{yy} f(x_{k + 1}, \tilde{y}_{\alpha}) (y^* - y_k) d\alpha d\beta \\
-	\geq \;&\frac{1}{\sigma}\left(\inprod{\nabla f(x_{k + 1}, y_k)}{z_{k + \half} - z^*} - \int_0^1 \int_0^\beta (z^* - z_{k + \half})^\top \nabla^2 f(x_{\alpha}, y_{\alpha}) (z^* - z_{k + \half}) d\alpha d\beta\right) \\
-	= \;&\frac{1}{\sigma}\left(f(x_{k + 1}, y_k) - f(x^*, y^*)\right).
-	\end{align*}
-	%
-	In the first inequality, we used \eqref{eq:firstorder} and the definition of $\tilde{y}$, and in the second we used \eqref{eq:hessdom} (since $x_{\alpha} \in \mathcal{X}_{k + 1}, y_{\alpha}, \tilde{y}_{\alpha} \in \mathcal{Y}_{k}$ by convexity).
-\end{proof}
-
-We now give a helper lemma specialized to the particular $f$ in \eqref{eq:proxfunction}, which will be used in the proof of convergence.
-
-\begin{lemma}
-	\label{lem:hessball}
-	For some $x_{k + 1}, y_k$, let $\mathcal{X}_{k + 1} = \left\{x \mid x \geq \half x_{k + 1}\right\}$ where the inequality is entrywise, and let $\mathcal{Y}_k$ be the entire domain of $y$ (i.e. $\mathcal{Y}$). Then for any $x' \in \mathcal{X}_{k + 1}, y', y'' \in \mathcal{Y}_k$,
-	%
-	\begin{equation*}
-	\nabla^2 r(x', y') \succeq \frac{1}{12} \nabla^2_{yy} r(x_{k + 1}, y'').
-	\end{equation*}
-	%
-\end{lemma}
-\begin{proof}
-	Recall that (since $\norm{A_{:j}}_1 = 2$)
-	%
-	\begin{equation*}
-	\nabla^2 r(x, y) = 2\dmax \begin{pmatrix}
-	5 \norm{A_{:j}}_1 \diag{\frac{1}{x_j}} & 2 A^\top \diag{y_i} \\
-	2 \diag{y_i} A & 2 \diag{A_i^\top x} \\
-	\end{pmatrix}.
-	\end{equation*}
-	%
-	Consider the diagonal approximation
-	%
-	\begin{equation*}
-	D(x) = 2\dmax \begin{pmatrix}
-	\norm{A_{:j}}_1 \diag{\frac{1}{x_j}} & 0 \\
-	0 & \diag{A_i^\top x} \\
-	\end{pmatrix}.
-	\end{equation*}
-	%
-	We claim for any $y$, 
-	%
-	\begin{equation}
-	\label{eq:diagapprox}
-	D(x) \preceq \nabla^2 r(x, y) \preceq 6D(x).
-	\end{equation}
-	%
-	To see this, consider the quadratic forms with respect to some vector $\begin{pmatrix} u & v \end{pmatrix}$:
-	%
-	\begin{align*}
-	\begin{pmatrix}
-	u & v
-	\end{pmatrix}
-	\nabla^2 r(x, y)
-	\begin{pmatrix}
-	u \\
-	v
-	\end{pmatrix}
-	&= 
-	2\dmax \sum_{i, j} A_{ij} \left(\frac{5u_j^2}{x_j} + 4u_j v_i y_i + 2 v_i^2 x_j \right),\\
-	\begin{pmatrix}
-	u & v
-	\end{pmatrix}
-	D(x)
-	\begin{pmatrix}
-	u \\
-	v
-	\end{pmatrix}
-	&= 
-	2\dmax \sum_{i, j} A_{ij} \left(\frac{u_j^2}{x_j} + v_i^2 x_j \right).
-	\end{align*}
-	%
-	Now \eqref{eq:diagapprox} follows because for any $y_i \in [-1, 1]$, it's easy to verify
-	%
-	\begin{equation*}
-	\frac{u_j^2}{x_j} + v_i^2 x_j \leq \frac{5u_j^2}{x_j} + 4u_j v_i y_i + 2 v_i^2 x_j \leq 6\left(\frac{u_j^2}{x_j} + v_i^2 x_j\right).
-	\end{equation*}
-	%
-	Therefore, to prove the lemma statement we can use
-	%
-	\begin{equation*}
-	\nabla^2 r(x', y') \succeq D(x') \succeq \half D(x_{k + 1}) \succeq \frac{1}{12} \nabla^2_{yy} r(x_{k + 1}, y'').
-	\end{equation*}
-	%
-	The inequality $D(x') \succeq \half D(x_{k + 1})$ followed from the definition of $\mathcal{X}_{k + 1}$, and the last inequality followed from $D(x_{k + 1})$ spectrally dominating $\frac{1}{6}\nabla^2 r(x_{k + 1}, y'')$, and restrictions of $D(x_{k + 1})$ to the $yy$ block can only decrease the quadratic form.
-\end{proof}
-
-We now give the proof of the linear rate of convergence.
-
-\begin{lemma}
-	\label{lem:convergef}
-	For $f(x, y)$ defined in \eqref{eq:proxfunction}, the alternating minimization scheme
-	%
-	\begin{enumerate}
-		\item $x_{k + 1} \defeq \textup{argmin}_{x \in \mathcal{X}} f(x, y_k)$.
-		\item $y_{k + 1} \defeq \textup{argmin}_{y \in \mathcal{Y}} f(x_{k + 1}, y)$.
-	\end{enumerate}
-	%
-	decreases the function error $f(x_k, y_k) - f(x_{\opt}, y_{\opt})$ by a factor of at least $1/24$ in each iteration.
-\end{lemma}
-\begin{proof}
-	We can apply Lemma~\ref{lem:altminprog} with the sets defined in Lemma~\ref{lem:hessball}, with $\sigma = 12$. On iteration $k$, consider picking the points $x^*, y^* = \half(x_{k + 1} + x_{\opt}), \half(y_k + y_{\opt})$. Evidently, $x^* \in \mathcal{X}_{k + 1}, y^* \in \mathcal{Y}_k$. Therefore, since $f(x_{k + 1}, y_{k + 1}) \geq f(x_{k + 2}, y_{k + 1})$,
-	%
-	\begin{equation*}
-	f(x_{k + 1}, y_k) - f(x_{k + 2}, y_{k + 1}) \geq f(x_{k + 1}, y_k) - f(x_{k + 1}, y_{k + 1}) \geq \frac{1}{12}(f(x_{k + 1}, y_k) - f(x^*, y^*)).
-	\end{equation*}
-	%
-	Furthermore, by convexity, we have
-	%
-	\begin{equation*}
-	f(x_{k + 1}, y_k) - f(x^*, y^*) \geq \half(f(x_{k + 1}, y_k) - f(x_{\opt}, y_{\opt})).
-	\end{equation*}
-	%
-	Finally, combining these two inequalities and rearranging,
-	%
-	\begin{equation*}
-	\frac{23}{24}(f(x_{k + 1}, y_k) - f(x_{\opt}, y_{\opt})) \geq f(x_{k + 2}, y_{k + 1}) - f(x_{\opt}, y_{\opt}).
-	\end{equation*}
-	%
-	Thus, by taking a $y$ step and then an $x$ step, we decrease the function error by a $1/24$ factor.
-\end{proof}
-
-Finally, we show that steps of the alternating minimization can be implemented in linear time.
-
-\begin{lemma}
-	\label{lem:fastimpl}
-	For $f(x, y)$ defined in \eqref{eq:proxfunction}, we can implement the steps
-	%
-	\begin{enumerate}
-		\item $x_{k + 1} \defeq \textup{argmin}_x f(x, y_k)$.
-		\item $y_{k + 1} \defeq \textup{argmin}_y f(x_{k + 1}, y)$.
-	\end{enumerate}
-	%
-	restricted to the relevant domains, in time $O(n^2)$.
-\end{lemma}
-%
-\begin{proof}
-	Recall $A$ has $n^2$ nonzero entries, so a matrix-vector multiplication can be performed in this time. Computing $x$ in linear time is straightforward: it is defined by
-	%
-	\begin{equation*}
-	\argmin_{x} \left\langle\gamma, x\right\rangle + \sum_{j \in [n]} x_j \log x_j \text{ such that } x \in \Delta^m, \gamma \defeq \frac{1}{20\dmax}\xi + \frac{1}{10} A^\top (y^2).
-	\end{equation*}
-	%
-	By examining the KKT conditions, it is clear that the minimizing $x$ is proportional to $\exp(-\gamma)$; computing $\gamma$ takes $O(n^2)$ time, as does the simplex projection. 	
-	Similarly, computing $y$ in linear time is simple for fixed $x$: it is
-	%
-	\begin{equation*}
-	\argmin_{y} \inprod{\eta}{y} + \inprod{2\dmax Ax}{y^2} \text{ such that } y \in [-1, 1]^{2n},
-	\end{equation*}
-	%
-	which is coordinate-wise decomposable as minimizing a quadratic over an interval.
-\end{proof}
-\iffalse
-\begin{lemma}
-Suppose we have $s_1, s_2$ with $\norm{s_1 - s_2}_\infty \leq c\dmax$, for some constant $c$. Then, define
-%
-\begin{equation*}
-z_1 \defeq \textup{argmin}_z \inprod{s_1}{z} + r(z), z_2 \defeq \textup{argmin}_{z} \inprod{s_2}{z} + r(z),
-\end{equation*}
-%
-for $r(z)$ in \eqref{eq:shermanreg}. Then, letting $z_1 = (x_1, y_1)$, $z_2 = (x_2, y_2)$,
-%
-\begin{enumerate}
-	\item There is a constant $d_x \geq 1$ such that $\norm{x_1 / x_2}_{\infty} \leq d_x$, where division is coordinate-wise.
-	\item There is a constant $d_y \geq 0$ such that $\norm{y_1 - y_2}_{\infty} \leq d_y$, where subtraction is coordinate-wise.
-\end{enumerate}
-%
-\end{lemma}
-\begin{proof}
-Let $s_1 = (s^x_1, s^y_1)$, $s_2 = (s^x_2, s^y_2)$. Writing down the optimality conditions for $z_1$, $z_2$, as in Lemma~\ref{lem:fastimpl}, we have
-%
-\begin{align*}
-x_1 \propto \exp\left(-\frac{A^\top(y_1^2)}{10} - \frac{s_1^x}{20\dmax} \right)&, x_2 \propto \exp\left(-\frac{A^\top(y_2^2)}{10} - \frac{s_2^x}{20\dmax} \right) \\
-y_1 = \textup{clip}_{[-1, 1]}\left(-\frac{s_1^y}{4\dmax Ax_1} \right)&, y_2 = \textup{clip}_{[-1, 1]}\left(-\frac{s_2^y}{4\dmax Ax_2} \right),
-\end{align*}
-%
-where here the $\textup{clip}_{[-1, 1]}(y)$ operation is coordinate-wise $\min(1, \max(-1, y))$. Now, note that unconditional on $y_1, y_2$, we have by the triangle inequality and $\norm{s_1^x - s_2^x}_{\infty} \leq c\dmax$,
-%
-\begin{equation*}
-\norm{\left(-\frac{A^\top(y_1^2)}{10} - \frac{s_1^x}{20\dmax}\right) - \left(-\frac{A^\top(y_2^2)}{10} - \frac{s_2^x}{20\dmax}\right)}_{\infty} \leq \frac{1}{10} + \frac{c}{20}.
-\end{equation*}
-%
-It is easy to see that if two points on the simplex are proportional to $\exp(g_1), \exp(g_2)$, and $\norm{g_1 - g_2}_\infty$ is bounded by a constant, then the two points multiplicatively approximate each other by a constant, proving the first claim.
-\end{proof}
-\fi
-
-\begin{theorem}[Complexity of alternating minimization]
-\label{thm:altcomplexity}
-We can obtain an $\epsilon/2$-approximate minimizer to the proximal steps required by Algorithm~\ref{alg:dualex} to $\epsilon/2$ accuracy, with the regularizer of \eqref{eq:shermanreg} and $\kappa = 3$, in $O(\log \gamma)$ parallelizable iterations for $\gamma = \log n \cdot \dmax \cdot \epsilon^{-1}$, and $O(n^2 \log \gamma)$ total work.
-\end{theorem}
-\begin{proof}
-By Lemmas~\ref{lem:convergef} and~\ref{lem:fastimpl}, we can spend $O(n^2)$ parallelizable work to decrease the suboptimality gap by a $1/24$ factor, so it remains to argue that the initial error is at most $\textrm{poly}(\log n, \dmax, \epsilon^{-1})$ to show that implementing the proximal steps to additive error $\epsilon / 2$ can be done in $O(\log \gamma)$ iterations. We show that this is true for implementing the proximal step for $z_t$; a similar argument holds for $w_t$. To this end, note that by our setting of $\kappa$, for any $z$ where we let $g(z) = (g^x(z), g^y(z))$,
-%
-\begin{align*}
-\frac{1}{2\kappa} \norm{g^x(z)}_{\infty} = \frac{1}{6}\norm{d + 2\dmax A^\top y}_{\infty} \leq \frac{\dmax}{2},\\
-\frac{1}{2\kappa}\norm{g^y(z)}_1 = \frac{1}{6}\norm{2\dmax(b - Ax)}_1 \leq \frac{4\dmax}{3}.
-\end{align*}
-%
-Therefore, for $s_t = (s^x_t, s^y_t)$, by the triangle inequality, and $t \leq 12\Theta / \epsilon$ the bound on the number of steps required where $\Theta$ is the range of $r$, we have
-%
-\begin{align*}
-\norm{s_t^x}_{\infty} \leq t \cdot \frac{1}{2\kappa} \norm{g^x(z)}_{\infty} \leq \frac{6\dmax\Theta}{\epsilon},\\
-\norm{s_t^y}_{1} \leq t \cdot \frac{1}{2\kappa}\norm{g^y(z)}_1 \leq \frac{16\dmax\Theta}{\epsilon}.
-\end{align*}
-%
-A simple calculation yields $\Theta = 20\dmax \log n + 4\dmax$ upper bounds the range of $r$. Finally, let $x_t^*, y_t^*$ be the minimizer of the proximal objective,
-%
-\begin{equation*}
-\inprod{s^x_t}{x} + \inprod{s^y_t}{y} + r(x, y).
-\end{equation*}
-%
-For any initialization $x_{\textrm{init}}, y_{\textrm{init}}$ to the alternating minimization, the suboptimality gap is given by
-%
-\begin{align*}
-\inprod{s^x_t}{x_{\textrm{init}} - x_t^*} + \inprod{s^y_t}{y_{\textrm{init}} - y_t^*} + r(x_{\textrm{init}}, y_{\textrm{init}}) - r(x_t^*, y_t^*)\\ 
-\leq \norm{x_{\textrm{init}} - x_t^*}_1\norm{s^x_t}_\infty + \norm{y_{\textrm{init}} - y_t^*}_{\infty}\norm{s^y_t}_1 + \Theta \leq \left(\frac{44\dmax}{\epsilon} + 1 \right)\Theta. 
-\end{align*}
-%
-Therefore, the total number of iterations required is bounded by $24 \log\left(\left(\frac{88\dmax}{\epsilon^2} + \frac{2}{\epsilon}\right)\Theta\right)$ as desired.
-\end{proof}
-
-FILE NAME: extragradient.tex
-
-\section{Main Algorithm}
-\label{sec:extragradient}
-
-This section describes our algorithm for finding a primal-dual pair $(x, y)$ with a small duality gap, with respect to the objective in \eqref{eq:pdl1reg}, which we restate here for convenience:
-%
-\begin{equation*}
-\min_{x \in \mathcal{X}} \max_{y \in \mathcal{Y}} d^\top x + 2\dmax\left(y^\top Ax - b^\top y\right), \; \mathcal{X} \defeq \Delta^m,\; \mathcal{Y} \defeq [-1, 1]^{2n}.
-\tag{Restatement of \eqref{eq:pdl1reg} }
-\end{equation*}
-%
-Our algorithm is a specialization of the algorithm in \cite{Sherman17}. One of our technical contributions in this regard is an analysis of the algorithm which more closely relates it to the analysis of dual extrapolation \cite{Nesterov07}, an algorithm for finding approximate saddle points with a more standard analysis. In Section~\ref{ssec:dexp}, we give the algorithmic framework and convergence analysis. In Section~\ref{ssec:altmin}, we provide analysis of an alternating minimization scheme for implementing steps of the procedure. The same procedure was used in \cite{Sherman17} which claimed without proof the linear convergence rate of the alternating minimization; we hope the analysis will make the method more broadly accessible to the optimization community. We defer many proofs to Appendix~\ref{app:extragradient}.
-
-\subsection{Dual Extrapolation Framework}
-\label{ssec:dexp}
-
-For an objective $F(x, y)$ convex in $x$ and concave in $y$, the standard way to measure the duality gap is to define the \emph{gradient operator} $g(x, y) = (\nabla_x F(x, y), -\nabla_y F(x, y))$, and show that for $z = (x, y)$ and any $u$ on the product space, the \emph{regret}, $\inprod{g(z)}{z - u}$, is small. Correspondingly, we define
-%
-\begin{equation*}
-g(x, y) \defeq \left(d + 2\dmax A^\top y, \; 2\dmax(b - Ax)\right).
-\end{equation*}
-%
-The dual extrapolation framework \cite{Nesterov07} requires a regularizer on the product space. The algorithm is simple to state; it takes two ``mirror descent-like'' steps each iteration, maintaining a state $s_t$ in the dual space\footnote{In this regard, it is more similar to the ``dual averaging'' or ``lazy'' mirror descent setup \cite{Bubeck15}.}. A typical setup is a Lipschitz gradient operator and a regularizer which is the sum of canonical strongly-convex regularizers in the norms corresponding to the product space $\mathcal{X}, \mathcal{Y}$. However, recent works have shown that this setup can be greatly relaxed and still obtain similar rates of convergence. In particular, \cite{Sherman17} introduced the following definition.
-
-\begin{definition}[Area-convexity]
-Regularizer $r$ is $\kappa$-area-convex with respect to operator $g$ if for any points $a, b, c$ in its domain,
-%
-\begin{equation}
-\label{eq:areaconvex}
-\kappa\left(r(a) + r(b) + r(c) - 3r\left(\frac{a + b + c}{3}\right)\right) \geq \inprod{g(b) - g(a)}{b - c}.
-\end{equation}
-%
-\end{definition}
-
-Area-convexity is so named because $\inprod{g(b) - g(a)}{b - c}$ can be viewed as measuring the ``area'' of the triangle with vertices $a, b, c$ with respect to some Jacobian matrix. In the case of bilinear objectives, the left hand side in the definition of area-convexity is invariant to permuting $a, b, c$, whereas the sign of the right hand side can be flipped by interchanging $a, c$, so area-convexity implies convexity. However, it does not even imply the regularizer $r$ is strongly-convex, a typical assumption for the convergence of mirror descent methods.
-
-We state the algorithm for time horizon $T$; the only difference from \cite{Nesterov07} is a factor of 2 in defining $s_{t + 1}$, i.e. adding a $1/2\kappa$ multiple rather than $1/\kappa$. We find it of interest to explore whether this change is necessary or specific to the analysis of \cite{Sherman17}.
-
-\begin{algorithm}[H]
-	\caption{$\bar{w} = \texttt{Dual-Extrapolation}(\kappa, r, g, T)$: Dual extrapolation with area-convex $r$.}
-	\label{alg:dualex}
-	\begin{algorithmic}
-		\STATE Initialize $s_0 = 0$, let $\bar{z}$ be the minimizer of $r$.
-		\FOR {$t < T$}
-		\STATE $z_t \gets \prox^r_{\bar{z}}(s_t)$.
-		\STATE $w_t \gets \prox^r_{\bar{z}}\left(s_t + \frac{1}{\kappa}g(z_t)\right)$.
-		\STATE $s_{t + 1} \gets s_t + \frac{1}{2\kappa} g(w_t)$.
-		\STATE $t \gets t + 1$.
-		\ENDFOR
-		\STATE $\textbf{return}$ $\bar{w} \defeq \frac{1}{T} \sum_{t \in [T]} w_t$.
-	\end{algorithmic}
+\begin{algorithm}[ht!]
+\begin{algorithmic}
+\Function{Normalize}{$G$:graph, $(T,\delta)$:\HCtree, $t\in V(T)$}
+\If {$t\in L(T)$}
+	\State \Return
+\EndIf
+\State $c_l,c_r\gets$ Children of $t$ in $T$
+\State $\delta\gets$ Cut Optimization (cf. Section \ref{Sct:CutOpt}) on $\delta$ with regards to $G[t]$
+\State\Call{Normalize}{$(T,\delta),c_l$}
+\State\Call{Normalize}{$(T,\delta),c_r$}
+\State $(T,\delta)\gets$ Left-Heavy (cf. Section \ref{Sct:LeftHeavy}) on $(T,\delta)$ with regards to $G[t]$
+\State $(T,\delta)\gets$ Balancing Out (cf. Section \ref{Sct:Balance}) on $(T,\delta)$ with regards to $G[t]$
+\EndFunction
+\\
+\Function{Normalization}{$G$:graph, $(T,\delta)$:\HCtree}
+\State $r\gets$ Root of $T$
+\State \Call{Normalize}{$G$,$(T,\delta)$,$r$}
+\EndFunction
+\end{algorithmic}
+\caption{This pseudocode outlines in which manner the subroutines are called on the \HCtree{} $(T,\delta)$.}
 \end{algorithm}
 
-\begin{restatable}[Dual extrapolation convergence]{lemma}{restateDualEx}
-	\label{lem:dualex}
-	Suppose $r$ is $\kappa$-area-convex with respect to $g$. Further, suppose for some $u$, $\Theta \geq r(u) - r(\bar{z})$. Then, the output $\bar{w}$ to Algorithm~\ref{alg:dualex} satisfies
-	%
-	\begin{equation*}
-	\inprod{g(\bar{w})}{\bar{w} - u} \leq \frac{2\kappa \Theta}{T}.
-	\end{equation*}
-	%
-\end{restatable}
+For every prism $P_i$ in $G$ and every internal node $t$ in $T$, we define $P_i[t]$ to be the subgraph of $P_i$ that lies inside the cluster at $t$: $P_i[t]=P_i\cap G[t]$. Each step of the procedure works on each of these subgraphs, striving to optimize the way these subgraphs are split.
 
-In fact, by more carefully analyzing the requirements of dual extrapolation we have the following.
+In the next section we show that after the Cut Optimization is done on all nodes of the tree, every subgraph $P_i[t]$ is one of the six subgraphs $S_1,\ldots,S_6$ that are depicted in Figure \ref{fig:optsub}. This means that in the continuation we only have to consider splits involving these subgraphs.
 
-\begin{restatable}{corollary}{restateDualExEps}
-\label{corr:dualex}
-Suppose in Algorithm~\ref{alg:dualex}, the proximal steps are implemented with $\epsilon'$ additive error. Then, the upper bound of the regret in Lemma~\ref{lem:dualex} is $2\kappa\Theta/T + \epsilon'$.
-\end{restatable}
+We introduce some symbolic notation to easily talk about these splits. Let $t$ be an internal node in the \HCtree{}  $T$ and let $c_l$ and $c_r$ be its children. Let $P_i[t]$ be any subgraph. If we have done Cut Optimization on $(T,\delta)$, we know that $P_i[t]$, $P_i[c_l]$ and $P_i[c_r]$ are isomorphic to some $S_a$, $S_{a_l}$ and $S_{a_r}$, respectively. Then we denote the \emph{split of $P_i$ at $t$} as $S_a\rightarrow(S_{a_l},S_{a_r})$.\\
 
-We now state a useful second-order characterization of area-convexity involving a relationship between the Jacobian of $g$ and the Hessian of $r$, which was proved in \cite{Sherman17}.
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.9\textwidth]{ill/optsub}
+\caption{The sub-prisms arising from optimal splits}
+\label{fig:optsub}
+\end{figure}
 
-\begin{theorem}[Second-order area-convexity, Theorem 1.6 in \cite{Sherman17}]
-	\label{thm:socarea}
-	For bilinear minimax objectives, i.e. whose associated operator $g$ has Jacobian
-	%
-	\begin{equation*}
-	J = \begin{pmatrix}
-	0 & M^\top \\
-	-M & 0
-	\end{pmatrix},
-	\end{equation*}
-	%
-	and for twice-differentiable $r$, if for any $z$ in the domain,
-	%
-	\begin{equation*}
-	\begin{pmatrix}
-	\kappa \nabla^2 r(z) & -J \\
-	J & \kappa \nabla^2 r(z)
-	\end{pmatrix}
-	\succeq 0,
-	\end{equation*}
-	%
-	then $r$ is $3\kappa$-area-convex with respect to $g$.
-	%for any $a, b, c$,
-	%
-	%\begin{equation*}
-	%3\kappa\left(r(a) + r(b) + r(c) - 3r\left(\frac{a + b + c}{3}\right)\right) \geq \inprod{g(b) - g(a)}{b - c}.
-	%\end{equation*}
-	%
-\end{theorem}
+We must say a few words on what it means for a subtree of an \HCtree{} to be fully normalized, i.e. after we have performed Balancing on the root of the subtree. The end goal is clear: when we are finished, i.e. when we have performed Balancing on the root $r$ of $T$, we want every prism being split into two $S_3$'s at the root, and those $S_3$'s split into $S_2$'s and $S_1$'s at the children of the root, as seen in Figure \ref{fig:prismvars}. But when dealing with the subtree $T[t]$ for a node $t$ further down the tree, the subgraphs involved can be any $S_a$. Therefore we define "fully normalized" as every such $S_a$ in the subtree $T[t]$ being split the same way, for all $a$. The allowed splits are $S_6\rightarrow(S_3,S_3)$, $S_5\rightarrow(S_3,S_2)$, $S_4\rightarrow(S_2,S_2)$ and $S_3\rightarrow(S_2,S_1)$.
+%These are clearly the most balanced splits. Since $S_5$ and $S_3$ have an odd number of vertices, we must split them unevenly. We then choose to let the biggest part lie on the left side. If $G[t]$ consists of only $S_1$'s and $S_2$'s, then $G[t]$ has no edges, and we consider $(T[t],\delta)$ to be already normalized.
 
-Finally, we complete the outline of the algorithm by stating the specific regularizer we use, which first appeared in \cite{Sherman17}. We then prove its 3-area-convexity with respect to $g$ by using Theorem~\ref{thm:socarea}. 
-%
-\begin{equation}
-\label{eq:shermanreg}
-r(x, y) = 2\dmax\left(10 \sum_{j \in [n]} x_j \log x_j + x^\top A^\top (y^2)\right),
-\end{equation}
-%
-where $(y^2)$ is entry-wise.
+The next sections are devoted to proving that in our normalization procedure, both the top-down traversal is a safe operation, performing Cut Optimization on every node, and also the subsequent bottom-up traversal is a safe operation, performing Left-Heavy Distribution followed by Balancing on every node of the tree.
 
-\begin{restatable}[Area-convexity of the Sherman regularizer]{lemma}{restateAreaConvexity}
-	\label{lem:rsoc}
-	For the Jacobian $J$ associated with the objective in \eqref{eq:pdl1reg} and the regularizer $r$ defined in \eqref{eq:shermanreg}, we have
-	%
-	\begin{equation*}
-	\begin{pmatrix}
-	\nabla^2 r(z) & -J \\
-	J & \nabla^2 r(z)
-	\end{pmatrix}
-	\succeq 0.  
-	\end{equation*}
-	%
-\end{restatable}
 
-We now give the proof of Theorem~\ref{thm:mainthm}, requiring some claims in Appendix~\ref{ssec:altmin} for the complexity of Algorithm~\ref{alg:dualex}. In particular, Appendix~\ref{ssec:altmin} implies that although the minimizer to the proximal steps cannot be computed in closed form because of non-separability, a simple alternating scheme converges to an approximate-minimizer in near-constant time.
+%\addtocounter{lemma}{1}
 
-\begin{proof}[Proof of Theorem~\ref{thm:mainthm}]
-The algorithm is Algorithm~\ref{alg:dualex}, using the regularizer $r$ in \eqref{eq:shermanreg}. Clearly, in the feasible region the range of the regularizer is at most $20\dmax\log n + 4\dmax$, where the former summand comes from the range of entropy and the latter $\norm{A^\top}_{\infty} = 2$. Thus, we may choose $\Theta = O(\dmax\log n)$ in Lemma~\ref{lem:dualex}, since $\inprod{\nabla r(\bar{z})}{\bar{z} - u} \leq 0 \Rightarrow V^r_{\bar{z}}(u) \leq r(u) - r(\bar{z})$ for all $u$. 
 
-By Theorem~\ref{thm:socarea} and Lemma~\ref{lem:rsoc}, $r$ is 3-area-convex with respect to $g$. By Corollary~\ref{corr:dualex}, $T = 12\Theta/\epsilon$ iterations suffice, implementing each proximal step to $\epsilon/2$-additive accuracy. Finally, using Theorem~\ref{thm:altcomplexity} to bound this implementation runtime concludes the proof.
+%\bibliography{Hierarchical-Clustering}
+
+%\newpage
+
+%\appendix
+%\section{Appendix}
+
+%In this appendix we give the details of Cut Optimization, Left-Heavy Distribution and Balancing, and prove the safeness of both the top-down and bottom-up traversals of the \HCtree.
+
+\subsection{Cut Optimization}\label{Sct:CutOpt}
+
+Let $G=P^{(k)}$ be $k$ disjoint prisms, and let $(T,\delta)$ be any \HCtree{} of $G$. We look at some node $t\in T$. Every subgraph $P_i[t]$ is split into two subgraphs $P_i[c_l]$ and $P_i[c_r]$, with some $r$ and $s$ vertices, respectively. Not every way to split one graph into two subgraphs with given numbers of vertices is equally good. The optimal split of $P_i[t]$ into subgraphs with $r$ and $s$ vertices, is simply the split that cuts the most edges.
+
+\begin{remark} \label{obs:optsplit}
+Let $G$ and $(T,\delta)$ as above. Let $t$ be an internal node in $T$ with children $c_l,c_r$, and assume that some $P_i[t]$ is split optimally. Furthermore, let $S_1,\ldots,S_6$ be the graphs depicted in Figure \ref{fig:optsub}. Whenever $P_i[t]=S_a$ for some $a$, then $P_i[c_l]=S_{a_l}$ and $P_i[c_r]=S_{a_r}$ for some $a_l,a_r$.
+\end{remark}
+
+\begin{proof}
+It is not hard to verify via simple counting that the subgraphs $S_1,\ldots,S_6$ have the minimal number of edges among the subgraphs of the prism. Since there, for any $S_a,S_b$ with $a+b\leq 6$, exists a split of $S_{a+b}$ into $S_a$ and $S_b$, this split must cut more edges than any other split of $S_{a+b}$.
+
+Obtaining an optimal split is thus a matter of simply switching around vertices between $P_i[c_l]$ and $P_i[c_r]$. Formally, switching vertices $u$ and $v$ in $G$ with respect to $(T,\delta)$ can be seen as an operation on $\delta$, yielding a new bijection $\delta'$ with the property that $\delta(u)=\delta'(v)$, $\delta(v)=\delta'(u)$, and for every vertex $w\neq u,v$, $\delta(w)=\delta'(w)$. This operation preserves the size of every subgraph of $G$ induced by $(T,\delta)$, therefore the only edges affected are the ones that lie on $u$ or $v$. We thus conclude that every split that cuts some $S_a$ optimally, cuts it into $S_{a_l},S_{a_r}$ for some $a_l,a_r$.
 \end{proof}
 
-FILE NAME: intro.tex
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.8\textwidth]{ill/bettersplit}
+\caption{In Cut Optimization, we obtain an optimal cut from a suboptimal one by switching two vertices, in this case $d$ and $e$. Note that $b$ and $c$ could also be used.}
+\label{fig:bettersplit}
+\end{figure}
 
-\section{Introduction}
-\label{sec:intro}
+%Now, we can show that Cut Optimization never decrease the cost of $(T,\delta)$:
 
-Optimal transport is playing an increasingly important role as a subroutine in tasks arising in machine learning \cite{ArjovskyCB17}, computer vision \cite{BonneelPPH11, SolomonGPCBNDG15}, robust optimization \cite{EsfahaniK18, BlanchetK17}, and statistics \cite{PanaretosZ16}. Given these applications for large scale learning, designing algorithms for efficiently approximately solving the problem has been the subject of extensive recent research \cite{Cuturi13, AltschulerWR17, GenevayCPB16, ChakrabartyK18, DvurechenskyGK18, LinHJ19, BlanchetJKS18, Quanrud19}.
+\begin{lemma}\label{Lemma:safepart1}
+For any node $t\in T$, Cut Optimization on $(T[t],\delta)$ is a safe operation.
+\end{lemma}
 
- Given two vectors $r$ and $c$ in the $n$-dimensional probability simplex $\Delta^n$ and a cost matrix $C \in \R^{n \times n}_{\geq 0}$\footnote{Similarly to earlier works, we focus on square matrices; generalizations to rectangular matrices are straightforward.}, the optimal transportation problem is
-%
-\begin{equation}
-\label{eq:ot}
-\min_{X \in \urc} \inprod{C}{X}, \quad \text{where} \quad \urc \defeq \left\{X \in \mathbb{R}^{n \times n}_{\geq 0},\; X\1 = r,\; X^\top\1 = c\right\}.
-\end{equation}
-%
-This problem arises from defining the \emph{Wasserstein} or \emph{Earth mover's} distance between discrete probability measures $r$ and $c$, as the cheapest coupling between the distributions, where the cost of the coupling $X \in \urc$ is $\inprod{C}{X}$. If $r$ and $c$ are viewed as distributions of masses placed on $n$ points in some space (typically metric), the Wasserstein distance is the cheapest way to move mass to transform $r$ into $c$. In \eqref{eq:ot}, $X$ represents the transport plan ($X_{ij}$ is the amount moved from $r_i$ to $c_j$) and $C$ represents the cost of movement ($C_{ij}$ is the cost of moving mass from $r_i$ to $c_j$).
+\begin{proof}
+From the proof of Remark \ref{obs:optsplit}, we see that for all $P_i[t]$ that is isomorphic to some $S_a$, performing Cut Optimization is a safe operation, as it never decreases the DC-cost of $(T,\delta)$. Now, note that we perform this operation on each node of $T$ in top-down fashion. At the root of $T$, $r$, we have that for every $1\leq i\leq k$, $P_i[r]=P=S_6$, so the operation is safe on $r$. At any other node $t$, we have already optimized the cuts in $u$, the parent of $t$. By Remark \ref{obs:optsplit}, we again have that for every $1\leq i\leq k$, there exists some $a$ such that $P_i[t]=S_a$. Therefore, the operation also is safe on every other node of $T$.
+\end{proof}
 
-Throughout, the value of \eqref{eq:ot} is denoted $\opt$. We call $\hat{X}  \in \mathcal{U}_{r, c}$ an \emph{$\epsilon$-approximate transportation plan} if $\inprod{C}{\hat{X}} \leq \opt + \epsilon$. Our goal is to design an efficient algorithm to produce such a $\hat{X}$.
+%Thus the top-down traversal viewed as a single operation on the input HC-tree is a safe operation, since safeness on each and every node implies safeness of the whole traversal.
 
-\subsection{Our Contributions}
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.8\textwidth]{ill/optsplit}
+\caption{After Cut Optimization, every split of sub-prisms that cuts at least one edge is one of the splits shown here or its mirror image. After Left Heavy the mirror images no longer appear.}
+\label{fig:optsplit}
+\end{figure}
 
-Our main contribution is an algorithm running in $\tilde{O}(\cmax/\epsilon)$ parallelelizable iterations\footnote{Our iterations consist of vector operations and matrix-vector products, which are easily parallelizable. Throughout $\cmax$ is the largest entry of $C$.} and $\tilde{O}(n^2\cmax/\epsilon)$ total work producing an $\epsilon$-approximate transport plan.
+\subsection{Left-Heavy Distribution}\label{Sct:LeftHeavy}
 
-Matching runtimes were given in the recent work of \cite{BlanchetJKS18, Quanrud19}. Their runtimes were obtained via reductions to matrix scaling and positive linear programming, each well-studied problems in theoretical computer science. However, the matrix scaling algorithm is a second-order Newton-type method which makes calls to structured linear system solvers, and the positive LP algorithm is not parallelizable (i.e. has depth polynomial in dimension). These features potentially limit the practicality of these 
-%reduction-based 
-algorithms. The key remaining open question this paper addresses is, \emph{is there an efficient first-order, parallelizable algorithm for approximating optimal transport?} We answer this affirmatively and give an efficient, parallelizable primal-dual first-order method; the only additional overhead is a scheme for implementing steps, incurring roughly an additional $\log \epsilon^{-1}$ factor. 
+Now we show that also Left-Heavy Distribution is a safe operation on each node. This step is performed after Cut Optimization, therefore we can assume every split in the \HCtree{} is an optimal one. Furthermore, since this step is done in tandem with the Balancing step, on each node before moving up to its parent, we can assume that when performing Left-Heavy Distribution on some node $t$ in $T$ with children $c_l$ and $c_r$, then $T[c_l]$ and $T[c_r]$ are already fully normalized.
 
-Our approach heavily leverages the recent improvement to the maximum flow problem, and more broadly two-player games on a simplex ($\ell_1$ ball) and a box ($\ell_\infty$ ball), due to the breakthrough work of \cite{Sherman17}. First, we recast \eqref{eq:ot} as a minimax game between a box and a simplex, proving correctness via a rounding procedure known in the optimal transport literature. Second, we show how to adapt the dual extrapolation scheme under the weaker convergence requirements of area-convexity, following \cite{Sherman17}, to obtain an approximate minimizer to our primal-dual objective in the stated runtime. En route, we slightly simplify analysis in \cite{Sherman17} and relate it more closely to the existing extragradient literature.
+The goal of the second step, Left-Heavy Distribution, is to ensure that for every $i$, $|P_i[c_l]|\geq|P_i[c_r]|$. The intuition behind this step is clear: if we first split one component unevenly, we would expect more uncut edges in the big part than in the small part. Indeed, this is true for the subgraphs $S_1,\ldots,S_6$; $S_a$ does not have more edges than $S_{a+1}$ for any $a \in \{1,\ldots,5\}$. Splitting all components unevenly with the big part on the same side, we give more weight to these remaining edges when they are cut, further down in $T$.
 
-Finally, we give preliminary experimental evidence showing our algorithm can be practical, and highlight some open directions in bridging the gap between theory and practice of our method, as well as accelerated gradient schemes \cite{DvurechenskyGK18, LinHJ19} and Sinkhorn iteration.
+We begin by dividing $G[t]$ into two pieces, $G[t]^L$ and $G[t]^R$. $G[t]^L$ is the union of all those $P_i[t]$ for which $|P_i[c_l]|\geq|P_i[c_r]|$ (the left-heavily split subgraphs), while $G[t]^R$ is the union of all those $P_i[t]$ for which $|P_i[c_l]|<|P_i[c_r]|$ (the right-heavily split subgraphs). $G[t]^L$ and $G[t]^R$ are clearly disjoint, since every connected subgraph lies wholly within one of these parts. We make a couple of observations about these two subgraphs:
 
-\subsection{Previous Work}
+\begin{remark}\label{Rmk:RightSideEdges}
+Every edge in $G[c_l]$ is also in $G[t]^L$, and every edge in $G[c_r]$ except those arising from (3-3)-splits is also in $G[c_r]$.
+\end{remark}
 
-{\bf Optimal Transport.} The problem of giving efficient algorithms to find $\epsilon$-approximate transport plans $\hat{X}$  which run in nearly linear time\footnote{We use ``nearly linear'' to describe complexities which have an $n^2 \textrm{polylog}(n)$ dependence on the dimension (where the size of input $C$ is $n^2$), and polynomial dependence on $\norm{C}_{\max}, \epsilon^{-1}$.} has been addressed by a line of recent work, starting with \cite{Cuturi13} and improved upon in \cite{GenevayCPB16, AltschulerWR17, DvurechenskyGK18, LinHJ19, BlanchetJKS18, Quanrud19}. We briefly discuss their approaches here.
+\begin{proof}
+We begin looking at $G[c_l]$: As we have performed Cut Optimization on the \HCtree{}, we can assume that $P_i[c_l]$ is isomorphic to $S_{a_l}$ for some $a_l\in\{0,\ldots,6\}$ for every $i$, and equivalently every $P_i[c_r]$ is isomorphic to some $S_{a_r}$. Now, for any $P_i[t]$, if this subgraph has been put into $G[t]^R$ it is because it has been split right-heavily, i.e. $a_l<a_r$. Since $a_l+a_r$ is at most 6, is follows that $a_l$ is at most 2. But the optimal subsets of the prism that contain edges all have at least 3 vertices, therefore $P_i[t]$ cannot contain any edges.
 
-Works by \cite{Cuturi13, AltschulerWR17} studied the Sinkhorn algorithm, an alternating minimization scheme. Regularizing \eqref{eq:ot} with an $\eta^{-1}$ multiple of entropy and computing the dual, we arrive at the problem
-%
-\begin{equation*}
-\label{eq:sink_dual}
-\min_{x,y \in \mathbb{R}^n} \textbf{1}^\top B_{\eta C}(x,y) \textbf{1} - r^\top x - c^\top y \quad \text{where} \quad B_{\eta C}(x,y)_{ij} = e^{x_i+y_j- \eta C_{ij}}.
-\end{equation*}
-%
-This problem is equivalent to computing diagonal scalings $X$ and $Y$ for $M=\exp(-\eta C)$ such that $XMY$ has row sums $r$ and column sums $c$. The Sinkhorn iteration alternates fixing the row sums and the column sums by left and right scaling by diagonal matrices until an approximation of such scalings is found, or equivalently until $XMY$ is close to being in $\urc$.% In other words, the algorithm is to alternate steps $X \gets \textbf{diag}\left(r_i / X_{i:}^\top \1\right)X$, $X \gets X \textbf{diag}\left(c_j / X_{:j}^\top \1\right)$ until $X$ is close to $\urc$.
+The proof for $G[c_r]$ is roughly equivalent to the one above, but we have to factor in that there can exist some $P_i[c_r]$ in $G[t]^L$ that is isomorphic to $S_3$. If this is the case, then we know that $P_i[c_l]$ also must be isomorphic to $S_3$, therefore $P_i[t]$ is a prism that is split (3-3)-wise.
+\end{proof}
 
-As shown in \cite{AltschulerWR17}, we can round the resulting almost-transportation plan to a transportation plan which lies in $\urc$ in linear time, losing at most $2\cmax (\norm{X\1 - r}_1 + \norm{X^\top\1 - c}_1)$ in the objective. Further, \cite{AltschulerWR17} showed that $\tilde{O}(\cmax^3/\epsilon^3)$ iterations of this scheme sufficed to obtain a matrix which $\epsilon/\cmax$-approximately meets the demands in $\ell_1$ with good objective value, by analyzing it as an instance of mirror descent with an entropic regularizer. The same work proposed an alternative algorithm, Greenkhorn, based on greedy coordinate descent. \cite{DvurechenskyGK18, LinHJ19}  showed that $\tildeOh{\cmax^2/\epsilon^2}$ iterations, corresponding to $\tildeOh{n^2\cmax^2/\epsilon^2}$ work, suffice for both Sinkhorn and Greenkhorn, the current state-of-the-art for this line of analysis.
+\begin{remark} \label{obs:SubgraphIndSet}
+Let $(T,\delta)$ be a  \HCtree{}, and $t$ a node with children $c_l,c_r$. We give the children of $c_l$ and $c_r$ names $l_1,l_2$ and $r_1,r_2$ respectively. Furthermore, we give the children of these 4 nodes names $x_1,x_2$, $x_3,x_4$, $y_1,y_2$ and $y_3,y_4$ respectively. If $T[c_l]$ and $T[c_r]$ are fully normalized, then for every $i\in\{1,\ldots,4\}$, $G[x_i]$ and $G[y_i]$ have no edges.
+\end{remark}
 
-An alternative approach based on first-order methods was studied by \cite{DvurechenskyGK18, LinHJ19}. These works considered minimizing an entropy-regularized Equation~\ref{eq:ot}; the resulting weighted softmax function is prevalent in the literature on approximate linear programming \cite{Nesterov05}, and has found similar applications in near-linear algorithms for maximum flow \cite{Sherman13, KelnerLOS14, SidfordT18} and positive linear programming \cite{Young01, ZhuO15}. An unaccelerated algorithm, viewable as $\ell_\infty$ gradient descent, was analyzed in \cite{DvurechenskyGK18} and ran in $\tilde{O}(\cmax/\epsilon^2)$ iterations. Further, an accelerated algorithm was discussed, for which the authors claimed an $\tilde{O}(n^{1/4} \cmax^{0.5} / \epsilon)$ iteration count. \cite{LinHJ19} showed that the algorithm had an additional dependence on a parameter as bad as $n^{1/4}$, roughly due to a gap between the $\ell_2$ and $\ell_\infty$ norms. Thus, the state of the art runtime in this line is the better of $\tildeOh{n^{2.5}\cmax^{0.5}/\epsilon}$, $\tildeOh{n^2 \cmax/\epsilon^2}$ operations. The dependence on dimension of the former of these runtimes matches that of the linear programming solver of \cite{LeeS14, LeeS15}, which obtain a polylogarithmic dependence on $\epsilon^{-1}$, rather than a polynomial dependence; thus, the question of obtaining an accelerated $\epsilon^{-1}$ dependence without worse dimension dependence remained open.
+\begin{proof}
+Assume that $T[c_l]$ and $T[c_r]$ are fully normalized. By definition, we know that all the subgraphs in $G[c_l]$ and $G[c_r]$ have been split optimally as balanced as possible. This means that all the subgraphs in $G[l_1]$, $G[l_2]$, $G[r_1]$ and $G[r_2]$ have at most 3 vertices. These subgraphs are also split optimally and balanced. This means that for any $T[x_i]$ or $T[y_i]$, every subgraph is isomorphic to either of $\emptyset, S_1, s_2$ and thus have no edges.
+\end{proof}
 
-This was partially settled in \cite{BlanchetJKS18, Quanrud19}, which studied the relationship of optimal transport to fundamental algorithmic problems in theoretical computer science, namely positive linear programming and matrix scaling, for which significantly-improved runtimes have been recently obtained \cite{ZhuO15, Allen-ZhuLOW17, CohenMTV17}. In particular, they showed that optimal transport could be reduced to instances of either of these objectives, for which $\tildeOh{\cmax/\epsilon}$ iterations, each of which required linear $O(n^2)$ work, sufficed. However, both of these reductions are based on black-box methods for which practical implementations are not known; furthermore, in the case of positive linear programming a parallel $\tilde{O}(1/\epsilon)$-iteration algorithm is not known. \cite{BlanchetJKS18} also showed any polynomial improvement to the runtime of our paper in the dependence on either $\epsilon$ or $n$ would result in maximum-cardinality bipartite matching in dense graphs faster than $\tilde{O}(n^{2.5})$ without fast matrix multiplication \cite{Sankowski09}, a fundamental open problem unresolved for almost 50 years \cite{HopcroftK73}.
+When explaining the operation, we assume that the nodes have the same names as in Remark \ref{obs:SubgraphIndSet}. From here, we identify the nodes that are children of $l_1$, $l_2$, $r_1$ and $r_2$. We then switch around all the subgraphs that are split right-heavy, so they become left-heavy split. Figure \ref{fig:leftheavy} shows this operation. Specifically, we modify $(T,\delta)$ into $(T',\delta')$ such that for each pair of nodes $x_i,y_i\in T'$, we have
+$$G_{(T',\delta')}[x_i] = (G_{(T,\delta)}[x_i]\cap G[t]^L)\cup(G_{(T',\delta')}[y_i]\cap G[t]^R)$$
+$$G_{(T',\delta')}[y_i] = (G_{(T,\delta)}[x_i]\cap G[t]^R)\cup(G_{(T',\delta')}[y_i]\cap G[t]^L)$$
 
-\begin{table}
-	\begin{center}
-		\begin{tabular}{|c|c|c|c|c|c|} 
-			\hline
-			\textbf{Year} & \textbf{Author} & \textbf{Complexity} & \textbf{Approach} & \textbf{1st-order} & \textbf{Parallel} \\ [0.5ex] 
-			\hline\hline
-			2015 & \cite{LeeS15} & $\tilde{O}(n^{2.5})$ & Interior point & No & No \\
-			\hline
-			2017-19 & \cite{AltschulerWR17} & $\tilde{O}(n^2 \cmax^2/\epsilon^2)$ & Sink/Greenkhorn & Yes & Yes\\
-			\hline
-			2018 & \cite{DvurechenskyGK18} & $\tilde{O}(n^2 \cmax/\epsilon^2)$ & Gradient descent & Yes & Yes \\
-			\hline
-			2018-19 & \cite{LinHJ19} & $\tilde{O}(n^{2.5}\cmax^{0.5}/\epsilon)$ & Acceleration & Yes & Yes \\
-			\hline
-			2018 & \cite{BlanchetJKS18} & $\tilde{O}(n^2 \cmax / \epsilon)$ & Matrix scaling & No & Yes\\
-			\hline
-			2018-19 & \cite{BlanchetJKS18, Quanrud19} & $\tilde{O}(n^2 \cmax / \epsilon)$ & Positive LP & Yes & No \\
-			\hline
-			2019 & This work & $\tilde{O}(n^2 \cmax / \epsilon)$ & Dual extrapolation & Yes & Yes \\
-			\hline
-		\end{tabular}
-	\end{center}
-	\caption{Optimal transport algorithms. Algorithms using second-order information use potentially-expensive SDD system solvers; the runtime analysis of Sink/Greenkhorn is due to \cite{DvurechenskyGK18, LinHJ19}.} %We say algorithms which call SDD system solvers or are not parallelizable are impractical, although this is of course subjective. \sidford{Maybe we should just have a first order and a parallel column? (just an idea) [I would rather avoid using what feels like a more subjective thing (i.e. practical) ]}}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ill/leftheavy}
+\caption{The circles beneath each node $x_i$ (or $y_i$) represents $G_{(T,\delta)}[x_i]$ (or $G_{(T,\delta)}[y_i]$); the colored halves represent the sub-prisms that are right-heavily split at $t$, i.e.  the union of all those $P_i[t]$ for which $|P_i[c_l]|<|P_i[c_r]|$. In the Left-Heavy Distribution operation, we switch each two colored parts with the same number.}
+\label{fig:leftheavy}
+\end{figure}
+
+\begin{lemma}\label{Lemma:safepart2}
+Left-Heavy Distribution on any node $t$ is a safe operation.
+\end{lemma}
+
+\begin{proof}
+
+As implied by Remark \ref{obs:SubgraphIndSet}, none of the subgraphs $G[x_i]$ or $G[y_i]$ have any edges. This means that for every $i$, any \HCtree{} of $G_{(T',\delta')}[x_i]$ or $G_{(T',\delta')}[y_i]$ has DC-cost zero. When this step is done, every edge in $G[t]$ is cut at one of the nodes $t$, $c_l$, $c_r$, $l_1$ or $l_2$. It is also evident that every edge is cut in a subgraph that is at least as big in $T'$ as it was in $T$, except the edges in $c_r$. Following Remark \ref{Rmk:RightSideEdges}, these edges must necessarily follow from a $S_6\rightarrow(S_3,S_3)$ split at $t$. The decrease in cost for these edges are therefore matched by the increase in cost for the other $S_3$ that is split at $c_l$. It follows that $(T',\delta')$ has at least as high DC-cost as $(T,\delta)$.
+Note that every subgraph in $T'[c_l]$ and $T'[c_r]$ is still fully normalized, since they are split the same way as before.
+\end{proof}
+
+
+\subsection{Balancing the \HCtree{}}\label{Sct:Balance}
+
+Let $t$ be a node of \HCtree{} $(T,\delta)$ on which we have just performed Left-Heavy Distribution. 
+This means that every split at a node $t$ is optimal and left-heavy, and also that we have performed Balancing on both its children $c_l,c_r$, so that $T[c_l],T[c_r]$ are both fully normalized. 
+In the Balancing step we fully normalize $T[t]$.
+Since splits at the children are left-heavy, there are 12 possible splits of sub-prisms at $t$ before we perform Balancing.  These are the 8 in Figure \ref{fig:optsplit} plus 4 not cutting any edge. 4 of these 12 (the first 4 in below) are as even as possible, while 8 are uneven. 
+
+\begin{minipage}[ht!]{0.5\textwidth}
+\begin{itemize}
+\item $a$ splits of type $S_6\rightarrow(S_3,S_3)$
+\item $b$ splits of type $S_5\rightarrow(S_3,S_2)$
+\item $c$ splits of type $S_4\rightarrow(S_2,S_2)$
+\item $d$ splits of type $S_3\rightarrow(S_2,S_1)$
+\item $a'$ splits of type $S_6\rightarrow(S_6,\emptyset)$
+\item $b'$ splits of type $S_6\rightarrow(S_5,S_1)$
+\end{itemize}
+\end{minipage}
+\begin{minipage}[ht!]{0.5\textwidth}
+\begin{itemize}
+\item $c'$ splits of type $S_6\rightarrow(S_4,S_2)$
+\item $d'$ splits of type $S_5\rightarrow(S_5,\emptyset)$
+\item $e'$ splits of type $S_5\rightarrow(S_4,S_1)$
+\item $f'$ splits of type $S_4\rightarrow(S_4,\emptyset)$
+\item $g'$ splits of type $S_4\rightarrow(S_3,S_1)$
+\item $h'$ splits of type $S_3\rightarrow(S_3,\emptyset)$\\
+\end{itemize}
+\end{minipage}
+
+The Balancing step is done as follows: Each uneven split of a sub-prism is modified into the unique even split on the same sub-prism, by way of moving some vertices from the left side over to the right side. Figure \ref{fig:mod} shows the details of this operation. In the resulting HC-tree, the sub-prisms are not necessarily split left-heavily in $c_l$ or $c_r$ anymore. This does not affect the cost, as these nodes are the lowest that cut edges. We still flip the left and right side of these sub-prisms to guarantee the behavior of performing Left-Heavy distribution on the parent of $t$.
+
+As an example of this type of modification, consider a sub-prism that is split $S_5\rightarrow(S_4,S_1)$ before the modification. We will modify it into $S_5\rightarrow(S_3,S_2)$. In this case, we move one single vertex from the left side to the right side. To optimize the split, we must pick the one vertex that is not adjacent to the vertex already lying on the right side. However, note that these movements of vertices from left subtree to right subtree affect also the cost of edges belonging to even splits, and thus Figure \ref{fig:mod} shows also the effects on even splits.
+
+For every possible split, we have denoted the number of sub-prisms that are split this way at $t$ with a letter as shown above, where the letters $a$ to $d$ are reserved for even splits and ticked letters $a'$ through $h'$ are reserved for uneven splits.
+
+From Remark \ref{obs:SubgraphIndSet}, we know that before the Balancing step at $t$, every edge in $G[t]$ is cut at one of the nodes $t$, $c_l$, $c_r$, $l_1$ and $l_2$ (where the nodes are named as in Figure \ref{fig:leftheavy}). After the modification, every edge in $G[t]$ is cut at one of the nodes $t$, $c_l$ and $c_r$ in $(T', \delta')$. How much is gained and lost for each type of split is shown in Figure \ref{fig:mod}.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=\textwidth]{ill/Modification1.pdf}
+\caption{This figure shows every type of split that gets some edges modified in the Balancing step, \emph{after} the modification. Green edges have gained cost and red edges have lost cost. Edges whose cost do not change are not shown.}
+\label{fig:mod}
+\end{figure}
+
+\begin{lemma}\label{Lemma:safepart3}
+In the bottom-up traversal the Balancing operations collectively contribute to making this bottom-up traversal a safe operation.
+\end{lemma}
+
+\begin{proof}
+Assume Balancing has been performed at a node $t$ as explained above, with the letters $a,...,d,a',...h'$ denoting the number of sub-prisms before the Balancing of each of the 12 types. 
+To calculate the change in cost, we must look at the sizes of subgraphs of $G[t]$, with $A$ the number of leaves of the subtree rooted at left child before Balancing at $t$ and $A'$ this number after the balancing at $t$, and similarly for $B,B',C$ (remember that $(T,\delta)$ is the tree before this step and $(T',\delta')$ is the modified \HCtree{}):
+
+\begin{itemize}
+\item $A := |G_{(T,\delta)}[c_l]| = 6(a')+5(b'+d')+4(c'+e'+f')+3(a+b+g'+h')+2(c+d)$
+\item $A' := |G_{(T',\delta')}[c_l]| = 3(a+b+a'+b'+c'+d'+e')+2(c+d+f'+g'+h')$
+\item $B := |G_{(T,\delta)}[c_r]| = 3(a)+2(b+c+c')+1(d+e+b'+e'+g')$
+\item $B' := |G_{(T',\delta')}[c_r]| = 3(a+a'+b'+c')+2(b+c+d'+e'+f'+g')+1(d+h')$
+\item $C := |G_{(T,\delta)}[l_1]| \leq 3(a'+b'+d')+2(a+b+c'+e'+f'+g'+h'+c+d)$
+\item $N := |G[t]| = A+B = A'+B'$
+\end{itemize}
+
+Back to our example, we see in Figure \ref{fig:mod} that in each of the $e'$ sub-prisms that used to be split $S_5 \rightarrow (S_4, S_1)$ there are 3 edges that have their cost changed, for two of them a gain of $B=(A+B)-A$ since these edges used to be on the left side but are now cut at $t$, while one edge incurs a loss of $A-A'$ since the left side has shrunk in size. The net gain (Gain minus Loss) for these $e'$ sub-prisms is thus $e'(2B-A+A')$.
+
+The net gain for all sub-prisms split at $t$ is found by summing in a similar way the net gain for all the 12 cases. Into this total net gain we now plug the definitions of $A,A',B,B',C,N$ given above, to get a large sum of products of pairs of the variables $a,...,d,a',...,h'$. After a simple, but tedious reorganizing of this sum each pair will be multiplied by a coefficient in this total net gain; these coefficients are shown in Table \ref{tab}.
+
+In this sum, every coefficient is non-negative, except for two terms: $-b'h'$ and $-c'h'$. This means that if $G[t]$ consists of only $S_6\rightarrow(S_4,S_2)$'s (denoted by $c'$) and $S_3\rightarrow(S_3,\emptyset)$'s (denoted by $h'$), then the modified $(T',\delta')$ actually has \emph{lower} DC-cost than the original $(T,\delta)$. In other words, not every call to Balancing will be safe. But in every ancestor of $t$, the $c'$ $S_6\rightarrow(S_4,S_2)$'s are $S_6\rightarrow(S_6,\emptyset)$'s, and the $h'$ $S_3\rightarrow(S_3,\emptyset)$'s will at some ancestor be involved in one of $S_4\rightarrow(S_3,S_1)$, $S_5\rightarrow(S_3,S_2)$ or $S_6\rightarrow(S_3,S_3)$. The coefficients for these combinations in the sum are 8, 13 and 24, respectively. Therefore, even when including these combinations of sub-prisms, the cost for these sub-prisms must increase more at the ancestors of $t$ than it decreases at $t$. The same argument can be put forward for the combination $-b'h'$. This implies that no pair of sub-prisms contributes a lower DC-cost in the finished, factorized HC-tree than at the start of the bottom-up traversal.
+\end{proof}
+
+\begin{table}[ht!]
+\centering
+\begin{tabular}{|c||r|r|r|r|r|r|r|r|}
+    \hline
+     & $a'$ & $b'$ & $c'$ & $d'$ & $e'$ & $f'$ & $g'$ & $h'$ \\
+     \hline \hline
+    $a$ & 24 & 13 & 3 & 16 & 6 & 9 & 3 & 3 \\
+    \hline
+    $b$ & 13 & 6 & 0 & 9 & 3 & 4 & 1 & 1 \\
+    \hline
+    $c$ & 16 & 8 & 2 & 10 & 4 & 6 & 2 & 2 \\
+    \hline
+    $d$ & 8 & 3 & 0 & 5 & 2 & 3 & 1 & 1 \\
+    \hline
+    $a'$ & 0 & 5 & 10 & 0 & 5 & 0 & 8 & 0 \\
+    \hline
+    $b'$ & x & 2 & 5 & 2 & 3 & 1 & 4 & \textcolor{red}{-1} \\
+    \hline
+    $c'$ & x & x & 0 & 6 & 1 & 2 & 1 & \textcolor{red}{-1} \\
+    \hline
+    $d'$ & x & x & x & 0 & 4 & 0 & 5 & 0 \\
+    \hline
+    $e'$ & x & x & x & x & 1 & 1 & 2 & 0 \\
+    \hline
+    $f'$ & x & x & x & x & x & 0 & 3 & 0 \\
+    \hline
+    $g'$ & x & x & x & x & x & x & 1 & 1 \\
+    \hline
+    $h'$ & x & x & x & x & x & x & x & 0 \\
+    \hline
+\end{tabular}
+\caption{The coefficients associated with each pair of variables, in the formula for net gain after modification of the \HCtree{} $(T[t],\delta)$. That is, net gain is equal to $24aa'+13ab'+\ldots+1g'h'+0h'h'$. Note the two negative numbers.}
+\label{tab}
 \end{table}
 
-Specializations of the transportation problem to $\ell_p$ metric spaces or arising from geometric settings have been studied \cite{SharathkumarA12, AgarwalS14, AndoniNOY14}. These specialized approaches seem fundamentally different than those concerning the more general transportation problem.
-
-Finally, we note recent work \cite{AltschulerBRW18} showed the promise of using the Nyström method for low-rank approximations to achieve speedup in theory and practice for transport problems arising from specific metrics. We find it interesting to combine our method with these improvements, and believe that as our method is based on matrix-vector operations, it is amenable to similar speedups.
-
-{\it Remark.} During the revision process for this work, an independent result \cite{LahnMR19} was published to arXiv, obtaining improved runtimes for optimal transport via a combinatorial algorithm. The work obtains a runtime of $\tilde{O}(n^2\cmax/\epsilon + n\cmax^2/\epsilon^2)$, which is worse than our runtime by a low-order term. Furthermore, it does not appear to be parallelizable.
-
-{\bf Box-simplex objectives.} Our main result follows from improved algorithms for bilinear minimax problems over one simplex domain and one box domain developed in \cite{Sherman17}. This fundamental minimax problem captures $\ell_1$ and $\ell_\infty$ regression over a simplex and box respectively, and inspired the development of conjugate smoothing \cite{Nesterov05} as well as mirror prox / dual extrapolation \cite{Nemirovski04, Nesterov07}. These latter two approaches are extragradient methods (using two gradient operations per iteration rather than one) for approximately solving a family of problems, which includes convex minimization and finding a saddle point to a convex-concave function. These methods simulate backwards Euler discretization of the gradient flow, similar to how mirror descent simulates forwards Euler discretization \cite{DiakonikolasO19}. The role of the extragradient step is a fixed point iteration (of two steps) which is a good approximation of the backwards Euler step when the operator is Lipschitz.
-
-Nonetheless, the analysis of \cite{Nemirovski04, Nesterov07} fell short in obtaining a $1/T$ rate of convergence without worse dependence on dimension for these domains, where $T$ is the iteration count (which would correspond to a $\tildeOh{1/\epsilon}$ runtime for approximate minimization). The fundamental barrier was that over a box, any strongly-convex regularizer in the $\ell_\infty$ norm has a dimension-dependent domain size (shown in \cite{SidfordT18}). This barrier can also be viewed as the reason for the worse dimension dependence in the accelerated scheme of \cite{DvurechenskyGK18, LinHJ19}. 
-
-The primary insight of \cite{Sherman17} was that previous approaches attempted to regularize the schemes of \cite{Nemirovski04, Nesterov07} with separable regularizers, i.e. the sum of a regularizer which depends only on the primal block and one which depends only on the dual. If, say, the domain of the primal block was a box, then such a regularization scheme would run into the $\ell_\infty$ barrier and incur a worse dependence on dimension. However, by more carefully analyzing the requirements of these algorithms, \cite{Sherman17} constructed a non-separable regularizer with small domain size, satisfying a property termed \emph{area-convexity} which sufficed for provable convergence of dual extrapolation \cite{Nesterov07}. Interestingly, the property seems specialized to dual extrapolation and not mirror prox \cite{Nemirovski04}.%; we remark a similar property recovers various accelerated algorithms for convex optimization through extragradient schemes \cite{CohenST19}, and resolving a conjecture stated in that work would unify the area-convexity method with mirror prox.
-
-FILE NAME: macros.tex
-
-\usepackage{thmtools}
-\usepackage{thm-restate}
-\usepackage{bm}
-%% Packages
-\usepackage{mathrsfs}           % \mathscr
-\usepackage{vmargin,fancyhdr}   % margins
-
-\usepackage{algorithm}
-\usepackage{algorithmic}
-
-\usepackage{subcaption}
-%\usepackage[lined, boxed, commentsnumbered, vlined]{algorithm2e}
-%\usepackage{algorithm}
-%\usepackage{algorithmic}
-%\usepackage{newalg}
-\usepackage{enumerate}
-
-\usepackage{amsmath,amssymb, amsthm}    % AMS
-\usepackage{verbatim}           % comment environment
-\usepackage{xspace}             % optional space
-%% \usepackage{ftnright}        % two column footnotes
-\usepackage{graphicx,float}     % figures
-\usepackage{ifthen,calc}        % macros
-\usepackage{textcomp}           % \textcent
-\usepackage{fancybox}           % \Ovalbox
-\usepackage{hhline}             % \hhline
-\usepackage{float}              % \float
-
-%% Space savings
-\usepackage[vflt]{floatflt}     % default is vflt
-\usepackage[small,compact]{titlesec}
-\usepackage{setspace}
-%\usepackage{subfigure}
-\renewcommand{\baselinestretch}{1.0}
-%\usepackage{draftcopy}
-
-%% PDF
-\usepackage{color}
-\definecolor{ForestGreen}{rgb}{0.1333,0.5451,0.1333}
-\usepackage{thumbpdf}
-\usepackage[letterpaper,
-colorlinks,linkcolor=ForestGreen,citecolor=ForestGreen,
-backref,
-bookmarks,bookmarksopen,bookmarksnumbered]
-{hyperref}
-
-%% Paper size
-\setpapersize{USletter}
-%% Margin: top + headheight + headsep, bottom + footskip (no footheight)
-\setmarginsrb{1in}{.5in}        % left, top
-{1in}{.5in}        % right, bottom
-{.25in}{.25in}     % headheight, headsep
-{.25in}{.5in}      % footheight, footskip
-%% Margin notes
-\setlength{\marginparwidth}{.75in}
-\setlength{\marginparsep}{.05in}
-
-%% Show side comments for drafts (set to 0 to hide)
-\newcommand{\showccc}[0]{0}
-\newcommand{\ccc}[2][nothing]{% comment
-	\ifthenelse{\showccc=0}{}{
-		\ensuremath{^{\Lsh\Rsh}}\marginpar{\raggedright\tiny\textsf{%
-				\ifthenelse{\equal{#1}{nothing}}{}{\textbf{#1}\\}#2}}}}
-%% Page Style
-\pagestyle{fancy}
-\newcounter{hours}\newcounter{minutes}
-\newcommand{\hhmm}{%
-	\setcounter{hours}{\time/60}%
-	\setcounter{minutes}{\time-\value{hours}*60}%
-	\ifthenelse{\value{hours}<10}{0}{}\thehours:%
-	\ifthenelse{\value{minutes}<10}{0}{}\theminutes}
-\lhead{}
-\chead{}
-\ifthenelse{\showccc=0}{\rhead{}}{\rhead{\today \ [\hhmm]}}
-\lfoot{}
-\cfoot{\thepage}
-\rfoot{}
-%% Inter-paragraph space
-%% \setlength{\parskip}{\medskipamount}
-
-%% Structure of equations, theorems etc.
-%\renewcommand{\theequation}{\arabic{section}.\arabic{equation}}
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{claim}[theorem]{Claim}
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{corollary}{Corollary}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{conjecture}[theorem]{Conjecture}
-\newtheorem{remark}[theorem]{Remark}
-\newtheorem{lemma}{Lemma}
-\newtheorem{fact}[theorem]{Fact}
-\newtheorem{example}[theorem]{Example}
-\newtheorem{axiom}[theorem]{Axiom}
-\newtheorem{property}[theorem]{Property}
-\newtheorem{invariant}[theorem]{Invariant}
-
-%\newcommand{\Oh}{\ensuremath{\mathcal{O}}}
-%\newcommand{\Oht}{\ensuremath{\widetilde{\mathcal{O}}}}
-\newcommand{\Ohstar}{\ensuremath{\Oh^\star}}
-\newcommand{\oh}{\ensuremath{o}}
-\newcommand{\ohstar}{\ensuremath{\oh^\star}}
-\newcommand{\bv}[1]{\mathbf{#1}}
-\def\D{\mathrm{d}}
-\newcommand{\dmax}{\norm{d}_{\infty}}
-
-
-%% Macros
-\newcommand{\QED}[0]{\hfill\ensuremath{\blacksquare}\medspace\\}
-\newcommand{\blah}[0]{\ensuremath{\blacktriangleright
-		\clubsuit\diamondsuit\heartsuit\spadesuit
-		\blacktriangleleft}\xspace}
-\newcommand{\set}[1]{\ensuremath{\{\,{#1}\,\}}}
-\newcommand{\stm}[0]{\ensuremath{\,\boldsymbol{|}\,}}
-\newcommand{\size}[1]{\ensuremath{|{#1}|}}
-\newcommand{\etal}[0]{\emph{et~al.}\xspace}
-\newcommand{\etc}[0]{\emph{etc.}\xspace}
-\newcommand{\ie}[0]{\emph{i.e.}\xspace}
-\newcommand{\eg}[0]{\emph{e.g.}\xspace}
-\newcommand{\vs}[0]{\emph{vs.}\xspace}
-\newcommand{\half}{\frac{1}{2}}
-
-%% Notations for this paper
-\newcommand{\cart}[2]{%cartesian product
-	\ensuremath{\{{#1} {\boldsymbol\otimes} {#2}\}}}
-\newcommand{\supports}[0]{\succcurlyeq}
-\newcommand{\TT}[0]{% $x\TT T x$ looks better this way
-	\ensuremath{{}^{\!\normalfont\textsf{T}\!}}}
-\newcommand{\IV}[0]{%
-	\ensuremath{{}^{\normalfont\textsf{-}\!1\!}}}
-\newcommand{\vv}[1]{\ensuremath{\boldsymbol{#1}}}
-\newcommand{\sqrootinv}[1]{\ensuremath{%
-		{#1}^{\textsf{-}\frac{1}{2}}}}
-\newcommand{\sqroot}[1]{\ensuremath{{#1}^{\frac{1}{2}}}}
-\newcommand{\R}[0]{\ensuremath{\mathbb{R}}}
-\newcommand{\diag}[1]{\textbf{\textup{diag}}\left(#1\right)}
-\newcommand{\reminder}[1]{{\textsf{\textcolor{red}{[#1]}}}}
-
-
-\floatstyle{ruled}
-\newfloat{algo}{tbp}{lop}%[section]
-\floatname{algo}{Algorithm}
-
-
-%% New operators
-\DeclareMathOperator{\nullsp}{null}
-\DeclareMathOperator{\spansp}{span}
-\DeclareMathOperator{\congest}{cong}
-\DeclareMathOperator{\dil}{dil}
-
-\newcommand{\trace}[1]{\textbf{tr}\left[#1\right]}
-%\newcommand{\norm}[1]{\left\Vert#1\right\Vert}
-\newcommand{\norm}[1]{\|#1\|}
-\newcommand{\norms}[1]{\|#1\|}
-\newcommand{\tr}[0]{\textup{Tr}}
-\newcommand{\E}[0]{\mathbb{E}}
-\newcommand{\opt}[0]{\textup{OPT}}
-\newcommand{\topt}[0]{\tilde{\textup{OPT}}}
-\newcommand{\prox}[0]{\textup{Prox}}
-\newcommand{\kjtian}[1]{{\color{red}\textbf{kjtian:} #1 }}
-
-%% Floats
-\usepackage{float}
-\floatstyle{plain}\newfloat{myfig}{t}{figs}[section]
-\floatname{myfig}{\textsc{Figure}}
-\floatstyle{plain}\newfloat{myalg}{H}{algs}[section]
-\floatname{myalg}{}
-\setlength{\fboxrule}{0.8pt}    % fbox border should be wider
-
-
-
-%\newcommand{\todo}[1]{}
-\newcommand{\todo}[1]{{\color{red}\textbf{TODO:}#1}}
-
-\newcommand{\onesv}{\textbf{1}}
-
-\newcommand{\obj}{\mathcal{OBJ}}
-
-\newcommand{\identity}{\textbf{I}}
-
-\newcommand{\nbr}[1]{\left\|#1\right\|}
-\newcommand{\rnorm}[1]{\nbr{#1}_\matr}
-\newcommand{\rpnorm}[1]{\nbr{#1}_{\matr'}}
-\newcommand{\expct}[3]{\ensuremath{\mathop{\text{\normalfont \textbf{E}}_{#1}}_{#2}}\left[#3\right]}
-\newcommand{\prob}[1]{\ensuremath{\mathop{\text{\normalfont \textbf{P}}}}\left[#1\right]}
-
-\newcommand{\epsmac}{\epsilon_{m}}
-\newcommand{\vecd}{\textbf{d}}
-\newcommand{\matcholesky}{\textbf{C}}
-
-\newcommand{\tvect}[2]{
-	\ensuremath{\Bigl(\negthinspace\begin{smallmatrix}#1\\#2\end{smallmatrix}\Bigr)}}
-
-\newcommand{\rasmus}[1]{{\color{green} RASMUS: #1}}
-\newcommand{\jakub}[1]{{\color{red} JAKUB: #1}}
-\newcommand{\richard}[1]{{\color{blue} RICHARD: #1}}
-
-% Domains
-\global\long\def\R{\mathbb{R}}
-\global\long\def\Rn{\mathbb{R}^{n}}
-\global\long\def\Rm{\mathbb{R}^{m}}
-\global\long\def\Z{\mathbb{Z}}
-\global\long\def\rPos{\R^{+}}
-\global\long\def\rNonNeg{\R^{\geq0}}
-
-
-\global\long\def\ellOne{\ell_{1}}
-\global\long\def\ellTwo{\ell_{2}}
-\global\long\def\ellInf{\ell_{\infty}}
-\global\long\def\ellP{\ell_{p}}
-
-
-\global\long\def\otilde{\tilde{\mathcal{O}}}
-
-
-% Types of Variables
-\global\long\def\boldVar#1{\mathbf{#1}}
-% bold variable
-\global\long\def\mvar#1{\boldVar{#1}}
-% matrix variable
-\global\long\def\vvar#1{\vec{#1}}
-% vector variable
-
-
-% Symbol for definitions
-\newcommand{\defeq}{\stackrel{\mathrm{{\scriptscriptstyle def}}}{=}}
-\newcommand{\inprod}[2]{\langle#1, #2\rangle}
-\newcommand{\inprodFull}[2]{\left\langle#1, #2\right\rangle}
-\newcommand{\Oh}[1]{O\left(#1\right)}
-\newcommand{\tildeOh}[1]{\tilde{O}\left(#1\right)}
-\newcommand{\1}{\mathbf{1}}
-\newcommand{\cmax}{\snorm{C}_{\max}}
-\newcommand{\urc}{\mathcal{U}_{r, c}}
-
-
-% Optimization
-
-
-\global\long\def\gradient{\bigtriangledown}
-\global\long\def\grad{\gradient}
-\global\long\def\hessian{\gradient^{2}}
-\global\long\def\hess{\hessian}
-\global\long\def\jacobian{\mvar J}
-\global\long\def\gradIvec#1{\vvar{f_{#1}}}
-\global\long\def\gradIval#1{f_{#1}}
-
-
-% Types of vectors
-\global\long\def\onesVec{\vec{\mathbb{1}}}
-\global\long\def\setVec#1{\onesVec_{#1}}
-\global\long\def\indicVec#1{\onesVec_{#1}}
-
-
-\global\long\def\trans#1{#1^{\intercal}}
-
-
-\global\long\def\ith#1#2{{#1}^{(#2)}}
-
-
-\global\long\def\specGeq{\succeq}
-\global\long\def\specLeq{\preceq}
-\global\long\def\specGt{\succ}
-\global\long\def\specLt{\prec}
-\global\long\def\ithEigValOf#1#2{\ith{\lambda}{#2}_{#1}}
-\global\long\def\ithEigVecOf#1#2{\ith{\vvar v}{#2}_{#1}}
-
-
-\global\long\def\innerProduct#1#2{\big\langle#1 , #2 \big\rangle}
-\global\long\def\norm#1{\left\|#1\right\|}
-\global\long\def\snorm#1{\|#1\|}
-\global\long\def\normA#1{\norm{#1}_{\ma}}
-\global\long\def\normInf#1{\norm{#1}_{\infty}}
-\global\long\def\normOne#1{\norm{#1}_{1}}
-\global\long\def\normTwo#1{\norm{#1}_{2}}
-\global\long\def\normCoord#1#2{\norm{#1}_{(#2)}}
-\global\long\def\normDual#1{{\norm{#1}^{*}}}
-
-
-\global\long\def\partiali#1{{\partialiOp}_{#1}}
-
-
-\global\long\def\dualVec#1{{#1}^{\#}}
-\global\long\def\dualVecOne#1{{#1}^{\#_{1}}}
-\global\long\def\dualVecInf#1{{#1}^{\#_{\infty}}}
-\global\long\def\dualVecP#1{{#1}^{\#_{p}}}
-\global\long\def\sharpv#1{\dualVec{#1}}
-\global\long\def\sharpgrad#1{\dualVec{\gradient#1}}
-
-
-\global\long\def\OPT{\mathrm{opt}}
-
-
-\global\long\def\fopt{f^{*}}
-
-
-% Standard variable
-\global\long\def\va{\vvar a}
-\global\long\def\vb{\vvar b}
-\global\long\def\vc{\vvar c}
-\global\long\def\vd{\vvar d}
-\global\long\def\ve{\vvar e}
-\global\long\def\vf{\vvar f}
-\global\long\def\vg{\vvar g}
-\global\long\def\vh{\vvar h}
-\global\long\def\vl{\vvar l}
-\global\long\def\vm{\vvar m}
-\global\long\def\vn{\vvar n}
-\global\long\def\vo{\vvar o}
-\global\long\def\vp{\vvar p}
-\global\long\def\vq{\vvar q}
-\global\long\def\vr{\vvar r}
-\global\long\def\vs{\vvar s}
-\global\long\def\vu{\vvar u}
-\global\long\def\vv{\vvar v}
-\global\long\def\vw{\vvar w}
-\global\long\def\vx{\vvar x}
-\global\long\def\vy{\vvar y}
-\global\long\def\vz{\vvar z}
-
-
-\global\long\def\vpi{\vvar{\pi}}
-\global\long\def\vxi{\vvar{\xi}}
-\global\long\def\vchi{\vvar{\chi}}
-\global\long\def\valpha{\vvar{\alpha}}
-\global\long\def\veta{\vvar{\eta}}
-\global\long\def\vlambda{\vvar{\lambda}}
-\global\long\def\vmu{\vvar{\mu}}
-\global\long\def\vdelta{\vvar{\Delta}}
-\global\long\def\vsigma{\vvar{\sigma}}
-\global\long\def\vzero{\vvar 0}
-\global\long\def\vones{\vvar 1}
-
-
-\global\long\def\vhx{\hat{x}}
-\global\long\def\vhy{\hat{y}}
-\global\long\def\vhs{\hat{s}}
-\global\long\def\vhc{\hat{c}}
-\global\long\def\vbx{\bar{x}}
-\global\long\def\vby{\bar{y}}
-\global\long\def\vbs{\bar{s}}
-
-
-\global\long\def\xopt{\vvar x^{*}}
-\global\long\def\varVec{\vvar x}
-\global\long\def\varVecA{\vvar x}
-\global\long\def\varVecB{\vvar y}
-\global\long\def\varMat{\mvar A}
-\global\long\def\varMatA{\mvar A}
-\global\long\def\varMatB{\mvar B}
-\global\long\def\varSubedges{H}
-
-
-\global\long\def\ma{\mvar A}
-\global\long\def\mb{\mvar B}
-\global\long\def\mc{\mvar C}
-\global\long\def\md{\mvar D}
-\global\long\def\mf{\mvar F}
-\global\long\def\mg{\mvar G}
-\global\long\def\mh{\mvar H}
-\global\long\def\mI{\mvar I}
-\global\long\def\mm{\mvar M}
-\global\long\def\mq{\mvar Q}
-\global\long\def\mr{\mvar R}
-\global\long\def\ms{\mvar S}
-\global\long\def\mt{\mvar T}
-\global\long\def\mU{\mvar U}
-\global\long\def\mv{\mvar V}
-\global\long\def\mw{\mvar W}
-\global\long\def\mx{\mvar X}
-\global\long\def\my{\mvar Y}
-\global\long\def\mz{\mvar Z}
-\global\long\def\mproj{\mvar P}
-\global\long\def\mSigma{\mvar{\Sigma}}
-\global\long\def\mLambda{\mvar{\Lambda}}
-\global\long\def\mha{\hat{\mvar A}}
-\global\long\def\mzero{\mvar 0}
-\global\long\def\mlap{\mvar{\mathcal{L}}}
-\global\long\def\mpi{\mvar{\mathcal{\Pi}}}
-
-
-\global\long\def\mdiag{\mvar{\texttt{d}iag}}
-
-
-\global\long\def\paramLengths{\vvar l}
-\global\long\def\paramCapacity{\vvar{\mu}}
-\global\long\def\paramWeights{\vvar w}
-
-
-% Common Variables
-\global\long\def\weightVec{\vvar w}
-\global\long\def\convexSet{Q}
-\global\long\def\convexSetElement{\vvar q}
-\global\long\def\oracle{\mathcal{O}}
-\global\long\def\moracle{\mvar O}
-\global\long\def\oracleOf#1{\oracle\left(#1\right)}
-\global\long\def\nSamples{s}
-\global\long\def\simplex{\Delta}
-
-
-\global\long\def\abs#1{\left|#1\right|}
-
-
-\global\long\def\capacityMatrix{\mvar U}
-
-
-\global\long\def\load{\mathrm{load}}
-\global\long\def\rload{\mathrm{rload}}
-\global\long\def\tpath{\mathrm{path}}
-\global\long\def\cost{\mathrm{cost}}
-\global\long\def\tr{\mathrm{tr}}
-
-
-\global\long\def\timeNearlyOp{\tilde{\mathcal{O}}}
-\global\long\def\timeNearlyLinear{\timeNearlyOp}
-
-
-% Function Variables
-\global\long\def\varFun{f}
-
-
-% Function Properties
-\global\long\def\funLip{L}
-\global\long\def\funCon{\mu}
-
-
-% Step functions
-\global\long\def\stepOpt{T}
-\global\long\def\stepOptCoordinate#1{\stepOpt_{(#1)}}
-
-
-\global\long\def\reff#1{R_{#1}^{\text{eff}}}
-
-
-\global\long\def\im{\mathrm{im}}
-
-
-\global\long\def\infseq#1#2{\{#1\}_{#2 = 0}^{\infty}}
-
-
-\global\long\def\ceil#1{\left\lceil #1 \right\rceil }
-
-
-\global\long\def\runtime{\mathcal{T}}
-\global\long\def\timeOf#1{\runtime\left(#1\right)}
-
-
-\global\long\def\domain{\mathcal{D}}
-
-
-\global\long\def\argmin{\mathrm{argmin}}
-\global\long\def\nnz{\mathrm{nnz}}
-\global\long\def\vol{\mathrm{vol}}
-\global\long\def\supp{\mathrm{supp}}
-\global\long\def\dist{\mathcal{D}}
-
-
-\newcommand{\smax}{\textup{smax}}
-%\newcommand{\tr}{\mathrm{Tr}}
-
-\newcommand{\sidford}[1]{{\{\color{green}\textbf{sidford:} #1 \}}}
-
-\usepackage{tikz}
-\usetikzlibrary{positioning,chains,fit,shapes,calc}
-
-FILE NAME: optimal-transport.tex
-
-\iffalse
-% -*- Mode: latex -*- 
-\pdfoutput=1
-\documentclass{article}
-\usepackage{neurips_2019}
-
-
-\input{macros.tex}
-
-\title{A Direct $\tilde{O}(1/\epsilon)$ Iteration Parallel Algorithm for Optimal Transport}
-
-\begin{document}
-	
-	\maketitle
-	
-	\begin{abstract}%
-		Optimal transportation, or computing the Wasserstein or ``earth mover's'' distance between two distributions, is a fundamental primitive which arises in many learning and statistical settings. We give an algorithm which solves this problem to additive $\epsilon$ with $\tilde{O}(1/\epsilon)$ parallel depth, and $\tilde{O}\left(n^2/\epsilon\right)$ work. Barring a breakthrough on a long-standing algorithmic open problem, this is optimal for first-order methods. \cite{BlanchetJKS18, Quanrud19} obtained similar runtimes through reductions to positive linear programming and matrix scaling. However, these reduction-based algorithms use complicated subroutines which may be deemed impractical due to requiring solvers for second-order iterations (matrix scaling) or non-parallelizability (positive LP). The fastest practical algorithms run in time $\tilde{O}(\min(n^2 / \epsilon^2, n^{2.5}  / \epsilon))$ \cite{DvurechenskyGK18, LinHJ19}. We bridge this gap by providing a parallel, first-order, $\tilde{O}(1/\epsilon)$ iteration algorithm without worse dependence on dimension, and provide preliminary experimental evidence that our algorithm may enjoy improved practical performance. We obtain this runtime via a primal-dual extragradient method, motivated by recent theoretical improvements to maximum flow \cite{Sherman17}.
-	\end{abstract}
-	
-	\input{intro}
-	\input{overview}
-	\input{extragradient}
-	\input{rounding}
-	\input{experiments}
-	
-	\newpage
-	
-	%% Acknowledgments---Will not appear in anonymized version
-	%\acks{We thank a bunch of people.}
-	\bibliographystyle{alpha}	
-	\bibliography{optimal-transport}
-	\newpage
-	\appendix
-	\input{algorithm}
-	%\input{overview_proofs}
-	\input{extragradient_proofs}
-	\input{rounding_proofs}
-	\input{experiment_details}
-\end{document}
-\fi
-
-% Old title page.
-\documentclass[11pt,letterpaper]{article}
-\special{papersize=8.5in,11in}  % for dvips
-
-\input{macros.tex}
-\input{bib_macros}
-
-\usepackage{url}
-
-\setlength\parindent{0pt}
-\setlength{\parskip}{4pt}
-
-\begin{document}
-
-	\begin{titlepage}
-		\def\thepage{}
-		\thispagestyle{empty}
-		
-		\title{A Direct $\tilde{O}(1/\epsilon)$ Iteration Parallel Algorithm for Optimal Transport} %\sidford{I like the title - only worry is that other paper does this too. Should we add first-order or something?}}
-		
-		\date{}
-		\author{
-			Arun Jambulapati\thanks{This material is based on work supported by NSF Graduate Fellowship DGE-114747.}\\
-			Stanford University \\
-			{\tt jmblpati@stanford.edu} 
-			\and
-			Aaron Sidford\thanks{This material is based on work supported by NSF CAREER Award CCF-1844855.}\\
-			Stanford University \\
-			{\tt sidford@stanford.edu}
-			\and
-			Kevin Tian\thanks{This material is based on work supported by NSF Graduate Fellowship DGE-1656518.}\\
-			Stanford University \\
-			{\tt kjtian@stanford.edu}
-		}
-		
-		\maketitle
-		
-		\input{abstract}
-		
-	\end{titlepage}
-
-	\input{intro}
-	\input{overview}
-	\input{extragradient}
-	\input{rounding}
-	\input{experiments}
-	
-	\subsection*{Acknowledgments}
-	We thank Jose Blanchet and Carson Kent for helpful conversations.
-	
-	%\newpage
-	
-	\bibliographystyle{alpha}	
-	\bibliography{optimal-transport}
-	\newpage
-	\begin{appendix}	
-		
-	\input{algorithm}
-	%\input{overview_proofs}
-	\input{extragradient_proofs}
-	\input{rounding_proofs}
-	\input{experiment_details}
-	\end{appendix}
-	
-\end{document}
-
-FILE NAME: overview.tex
-
-\section{Overview}
-\label{sec:overview}
-
-First, in Section~\ref{sec:reformulation} we first describe a reformulation of \eqref{eq:ot} as a primal-dual objective, which we solve approximately in Section~\ref{sec:extragradient}. Then in Section~\ref{sec:notation} we give additional notation critical for our analysis. In Section~\ref{sec:extragradient} we leverage this to give an overview of our main algorithm.
-
-\subsection{$\ell_1$-regression formulation}
-\label{sec:reformulation}
-
-We adapt the view of \cite{BlanchetJKS18, Quanrud19} of the objective \eqref{eq:ot} as a positive linear program. Let $d$ be the (vectorized) cost matrix $C$ associated with the instance and let $\Delta^{n^2}$ be the $n^2$ dimensional simplex\footnote{We use $d$ because $C$ often arises from distances in a metric space, and to avoid overloading $c$.}. We recall $r, c$ are specified row and column sums with $\1^\top r = \1^\top c = 1$. The optimal transport problem can be written as, for $m = n^2$, and $A \in \{0, 1\}^{2n \times m}, b \in \R_{\geq 0}^{2n}$, for $A$ the (unsigned) \emph{edge-incidence matrix} of the underlying bipartite graph and $b$ the concatenation of $r$ and $c$.
-%
-\begin{equation}
-\label{eq:otobj}
-\min_{x \in \Delta^n, Ax = b} d^\top x.
-\end{equation}
-%
-\begin{figure}[ht]
-	%
-	\begin{equation*}
-	A = \begin{pmatrix}
-	1 & 1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
-	0 & 0 & 0 & 1 & 1 & 1 & 0 & 0 & 0 \\
-	0 & 0 & 0 & 0 & 0 & 0 & 1 & 1 & 1 \\
-    1 & 0 & 0 & 1 & 0 & 0 & 1 & 0 & 0 \\
-	0 & 1 & 0 & 0 & 1 & 0 & 0 & 1 & 0 \\
-	0 & 0 & 1 & 0 & 0 & 1 & 0 & 0 & 1 
-	\end{pmatrix},\;
-	b = \begin{pmatrix}
-	1/3 \\
-	1/3 \\
-	1/3 \\
-	1/3 \\
-	1/3 \\
-	1/3 
-	\end{pmatrix}.
-	\end{equation*}
-	%
-	\caption{Edge-incidence matrix $A$ of a $3 \times 3$ bipartite graph and uniform demands.}	
-\end{figure}
-
-In particular, $A$ is the 0-1 matrix on $V \times E$ such that $A_{ve} = 1$ iff $v$ is an endpoint of edge $e$. We summarize some additional properties of the constraint matrix $A$ and vector $b$.
-
-\begin{fact} $A$, $b$ have the following properties.
-	%
-	\begin{enumerate}
-		\item $A \in \{0, 1\}^{2n \times m}$ has 2-sparse columns and $n$-sparse rows. Thus $\norm{A}_{1 \rightarrow 1} = 2$.
-		\item $b^\top = \begin{pmatrix} r^\top & c^\top \end{pmatrix}$, so that $\norm{b}_1 = 2$.
-		\item $A$ has $n^2$ nonzero entries.
-	\end{enumerate}
-	%
-\end{fact}
-
-Section~\ref{sec:rounding} recalls the proof of the following theorem, which first appeared in \cite{AltschulerWR17}.% \sidford{Since we have positive costs, really it is the max of this that we depend on (rather than $\ell_1$) - iif we give the notation for this, I think the algorithms will get a bit cleaner.}
-
-\begin{restatable}[Rounding guarantee, Lemma 7 in \cite{AltschulerWR17}]{theorem}{restateRounding}
-\label{thm:rounding}
-There is an algorithm which takes $\tilde{x}$ with $\norm{A\tilde{x} - b}_1 \leq \delta$ and produces $\hat{x}$ in $O(n^2)$ time, with
-%
-\begin{equation*}
-A\hat{x} = b, \norm{\tilde{x} - \hat{x}}_1 \leq 2\delta.
-\end{equation*}
-%
-\end{restatable}
-
-We now show how the rounding procedure gives a roadmap for our approach. Consider the following $\ell_1$ regression objective over the simplex (a similar penalized objective appeared in \cite{Sherman13}): %Consider for a particular guess of $\topt$, the following $\ell_1$ regression objective over a halfspace's intersection with the simplex:
-%
-\begin{equation}
-\label{eq:l1regress}
-\min_{x \in \Delta^m} d^\top x + 2\dmax \norm{Ax - b}_1.
-\end{equation}
-%
-We show that the penalized objective value is still $\opt$, and furthermore any approximate minimizer yields an approximate transport plan.
-
-\begin{restatable}[Penalized $\ell_1$ regression]{lemma}{restateLRounding}
-\label{lem:l1rounding}
-The value of \eqref{eq:l1regress} is $\opt$. Also, given $\tilde{x}$, an $\epsilon$-approximate minimizer to \eqref{eq:l1regress}, we can find $\epsilon$-approximate transportation plan $\hat{x}$ 
-in $O(n^2)$ time.
-\end{restatable}
-\begin{proof}
-	Recall $\opt = \min_{Ax = b} d^\top x$. Let $\tilde{x}$ be the minimizing argument in \eqref{eq:l1regress}. We claim there is some optimal $\tilde{x}$ with $A\tilde{x} = b$; clearly, the first claim is then true. Suppose otherwise, and let $\norm{Ax - b}_1 = \delta > 0$. Then, let $\hat{x}$ be the result of the algorithm in Theorem~\ref{thm:rounding}, applied to $\tilde{x}$, so that $A\hat{x} = b, \norm{\tilde{x} - \hat{x}}_1 \leq 2\delta$. We then have
-	%
-	\begin{equation*}
-	d^\top \hat{x} + 2\dmax\norm{A\hat{x} - b}_1 = d^\top(\hat{x} - \tilde{x}) + d^\top \tilde{x} \leq d^\top \tilde{x} + \dmax \norm{\hat{x} - \tilde{x}}_1 \leq d^\top \tilde{x} + 2\dmax\delta.
-	\end{equation*}
-	%
-	The objective value of $\hat{x}$ is no more than of $\tilde{x}$, a contradiction. By this discussion, we can take any approximate minimizer to \eqref{eq:l1regress} and round it to a transport plan without increasing the objective.
-\end{proof}
-
-Section~\ref{sec:extragradient} proves Theorem~\ref{thm:mainthm}, which says we can efficiently find an approximate minimizer to \eqref{eq:l1regress}. %Producing an output with Theorem~\ref{thm:mainthm}, and then applying Theorem~\ref{thm:rounding}, yields the main result of this paper.
-
-\begin{theorem}[Approximate $\ell_1$ regression over the simplex]
-\label{thm:mainthm}
-There is an algorithm (Algorithm~\ref{alg:dualex}) taking  input $\epsilon$, which has $O((\dmax\log n \log \gamma)/\epsilon)$ parallel depth for $\gamma = \log n \cdot \dmax / \epsilon$, and total work $O(n^2 (\dmax\log n \log \gamma)/\epsilon)$, and obtains $\tilde{x}$ an $\epsilon$-additive approximation to the objective in \eqref{eq:l1regress}.
-\end{theorem} 
-
-We will approach proving Theorem~\ref{thm:mainthm} through a primal-dual viewpoint, in light of the following (based on the definition of the $\ell_1$ norm):
-%
-\begin{equation}
-\label{eq:pdl1reg}
-\min_{x \in \Delta^m} d^\top x + 2\dmax\norm{Ax - b}_1 = \min_{x \in \Delta^m} \max_{y \in [-1, 1]^{2n}} d^\top x + 2\dmax\left(y^\top Ax - b^\top y\right).
-\end{equation}
-%
-
-Further, a low-\emph{duality gap} pair to \eqref{eq:pdl1reg} yields an approximate minimizer to \eqref{eq:l1regress}.
-
-\begin{lemma}[Duality gap to error]
-Suppose $x, y$ is feasible ($x \in \Delta^m, y \in [-1, 1]^{2n}$), and for any feasible $u, v$,
-%
-\begin{equation*}
-\left(d^\top x + 2\dmax\left(v^\top A x - b^\top v\right)\right) - \left(d^\top u + 2\dmax\left(y^\top A u - b^\top y\right)\right) \leq \delta.
-\end{equation*}
-%
-Then, we have $d^\top x + 2\dmax\norm{Ax - b}_1 \leq \delta + \opt$.
+\begin{lemma}\label{Lemma:allsafe}
+The top-down traversal of $(T,\delta)$ in which Cut Optimization is performed is a safe operation. The bottom-up traversal of $(T,\delta)$ in which Left-Heavy Distribution and Balancing is performed is a safe operation.
 \end{lemma}
-\begin{proof}
-The result follows from maximizing over $v$, and noting that for the minimizing $u$,
-%
-\begin{equation*}
-d^\top u + 2\dmax\left(y^\top Au - b^\top y\right) \leq d^\top u + 2\dmax\norm{Au - b}_1 = \opt.
-\end{equation*}
-%
-\end{proof}
 
-Correspondingly, Section~\ref{sec:extragradient} gives an algorithm which obtains $(x, y)$ with bounded duality gap within the runtime of Theorem~\ref{thm:mainthm}.
-
-\subsection{Notation}
-\label{sec:notation}
-
-$\R_{\geq 0}$ is the nonnegative reals. $\1$ is the all-ones vector of appropriate dimension when clear. The probability simplex is $\Delta^d \defeq \{ v \mid  v \in \R_{\geq 0}^d, \1^\top v = 1\} $. We say matrix $X$ is in the simplex of appropriate dimensions when its (nonnegative) entries sum to one. 
-
-$\norm{\cdot}_1$ and $\norm{\cdot}_{\infty}$ are the $\ell_1$ and $\ell_\infty$ norms, i.e. $\norm{v}_1 = \sum_i |v_i|$ and $\norm{v}_\infty = \max_i |v_i|$. When $A$ is a matrix, we let $\norm{A}_{p \rightarrow q}$ be the matrix operator norm, i.e. $\textup{sup}_{\norm{v}_p = 1} \norm{Av}_q$, where $\norm{\cdot}_p$ is the $\ell_p$ norm. In particular, $\norm{A}_{1 \rightarrow 1}$ is the largest $\ell_1$ norm of a column of $A$.
-
-Throughout $\log$ is the natural logarithm. For $x \in \Delta^d$, $h(x) = \sum_{i \in [d]} x_i \log x_i$ is (negative) entropy where $0 \log 0 = 0$ by convention. It is well-known that $\max_{x \in \Delta^d} h(x) - \min_{x \in \Delta^d} h(x) = \log d$.
-
-We also use the Bregman divergence of a regularizer and the proximal operator of a divergence.
-
-\begin{definition}[Bregman divergence]
-For (differentiable) regularizer $r$ and $z, w$ in its domain, the \emph{Bregman divergence} from $z$ to $w$ is
-%
-\begin{equation*}
-V^r_z(w) \defeq r(w) - r(z) - \inprod{\nabla r(z)}{w - z}.
-\end{equation*}
-%
-\end{definition}
-
-When $r$ is convex, the divergence is nonnegative and convex in the argument ($w$ in the definition).
-
-\begin{definition}[Proximal operator]
-For (differentiable) regularizer $r$, $z$ in its domain, and $g$ in the dual space (when the domain is in $\R^d$, so is the dual space), we define the \emph{proximal operator} as
-%
-\begin{equation*}
-\prox_z(g) \defeq \textup{argmin}_w \left\{ \inprod{g}{w} + V^r_z(w) \right\}.
-\end{equation*}
-%
-\end{definition}
-
-Several variables have specialized meaning throughout. All graphs considered will be on $2n$ vertices with $m$ edges, i.e. $m = n^2$. $A \in \R^{2n \times m}$ is the edge-incidence matrix. $d$ is the vectorized cost matrix $C$. $b$ is the constraint vector, concatenating row and column constraints $r$, $c$. In algorithms for solving \eqref{eq:pdl1reg}, $x$ and $y$ are primal (in a simplex) and dual (in a box) variables respectively. In Section~\ref{sec:extragradient}, we adopt the linear programming perspective where the decision variable $x \in \Delta^m$ is a vector. In Section~\ref{sec:rounding}, for convenience we take the perspective where $X$ is an unflattened $n \times n$ matrix. $\urc$ is the feasible polytope: when the domain is vectors, $\urc$ is $x \mid Ax = b$, and when it is matrices, $\urc$ is $X \mid X\1 = r, X^\top\1 = c$ (by flattening $X$ this is consistent).
-
-FILE NAME: rounding_proofs.tex
-
-\section{Missing proofs from Section~\ref{sec:rounding}}
-\label{app:rounding}
-
-In this section, we give the proof to Theorem~\ref{thm:rounding}.
-
-\restateRounding*
 
 \begin{proof}
-	The algorithm is Algorithm~\ref{alg:round}. We adopt the alternative view of $\tilde{x}$ as a $n \times n$ matrix $\tilde{X}$ in the simplex, and define operations $r(X) = X\1, c(X) = X^\top\1$, recalling the first and last $n$ entries of $b$ are $r, c$, i.e. the row and column constraints. Recall we assume we have
-	%
-	\begin{equation*}
-	\norm{r(\tilde{X}) - r}_1 + \norm{c(\tilde{X}) - c}_1 \leq \delta.
-	\end{equation*}
-	%
-	Clearly all operations in Algorithm~\ref{alg:round} take $O(n^2)$ time. To explain briefly, $X'$ is fixed so that its row sums are feasible (i.e. $X'\1 \leq r$) and $X''$ is fixed so that its column sums are feasible. Further, entrywise $X'' \leq X' \leq \tilde{X}$, so $X''$ is feasible. We first bound
-	%
-	\begin{equation*}
-	d \defeq \norm{X'' - \tilde{X}}_1 = \left(\sum_{i: r_i(\tilde{X}) > r_i} r_i(\tilde{X}) - r_i\right) + \left(\sum_{j: c_j(X') > c_j} c_j(X') - c_j\right).
-	\end{equation*}
-	%
-	Note $\norm{r(\tilde{X}) - r}_1 \geq \sum_{i: r_i(\tilde{X}) > r_i} r_i(\tilde{X}) - r_i$. Further, by $X' \leq \tilde{X}$ entrywise,
-	%
-	\begin{equation*}
-	\sum_{j: c_j(X') > c_j} c_j(X') - c_j \leq \norm{c(\tilde{X}) - c}_1.
-	\end{equation*}
-	%
-	Thus $d \leq \delta$. $\hat{X} \in \urc$, since $e_r, e_c \geq 0$ and $\1^\top e_r = \1^\top e_c = e$, so $\hat{X}\1 = r, \; \hat{X}^\top \1 = c$. Also,
-	%
-	\begin{equation*}
-	\norm{\hat{X} - \tilde{X}}_1 \leq \norm{X'' - \tilde{X}}_1 + \norm{\hat{X} - X''}_1 \leq \delta + e.
-	\end{equation*}
-	%
-	Finally,
-	%
-	\begin{equation*}
-	e = 1 - \1^\top X'' \1 = 1 - \left(\1^\top \tilde{X} \1 - d\right) = d.
-	\end{equation*}
-	%
-	Thus using $d \leq \delta$ proves the claim.
+Lemma \ref{Lemma:safepart1} has already established that the top-down traversal consists of a series of safe operations and is therefore itself a safe operation, i.e. the DC-cost of the HC-tree that was given as input is no higher than the DC-cost of the HC-tree after top-down traversal. 
+By Lemma \ref{Lemma:safepart2} the Left-heavy Distribution on each node is also safe. By Lemma \ref{Lemma:safepart3} the combined result of all the Balancing operations together imply that the bottom-up traversal is also a safe operation, i.e. the DC-cost of the HC-tree resulting from the top-down traversal does not have DC-cost higher than the DC-cost of the HC-tree after the bottom-up traversal. 
 \end{proof}
 
-FILE NAME: rounding.tex
+%We are ready to prove the previously mentioned Lemma 5. 
 
-\section{Rounding to $\urc$}
-\label{sec:rounding}
+\begin{customlemma}{5}
+The prism $P$ is max-well-behaved, and thus $C_6$ is min-well-behaved.
+\end{customlemma}
 
-We state the rounding procedure in \cite{AltschulerWR17} for completeness here, which takes a transport plan $\tilde{X}$ close to $\urc$ and transforms it into a plan which exactly meets the constraints and is close to $\tilde{X}$ in $\ell_1$, and then prove its correctness in Appendix~\ref{app:rounding}. Throughout $r(X) \defeq X\1, c(X) \defeq X^\top \1$.
 
-\begin{algorithm}[H]
-	\caption{$\hat{X} = \texttt{Rounding}(\tilde{X}, r, c)$: Rounding to feasible polytope}
-	\label{alg:round}
-	\begin{algorithmic}
-		\STATE $X' \gets \diag{\min\left(\frac{r}{r(\tilde{X})}, 1\right)} \tilde{X}$.
-		\STATE $X'' \gets X' \diag{\min\left(\frac{c}{c(X')}, 1\right)}$.
-		\STATE $e_r \gets r - \1^\top r(X''), e_c \gets c - \1^\top c(X''), E \gets \1^\top e_r$.
-		\STATE $\hat{X} \gets X'' + \frac{1}{E} e_r e_c^\top$.
-		\STATE $\textbf{return}$ $\hat{X}$.
-	\end{algorithmic}
-\end{algorithm}
+\begin{proof}
+We have demonstrated a safe normalization procedure that works for any $k$ and any HC-tree of $G=P^{(k)}$ as described by Property \ref{Fact:ExistsProc}. Safeness of the procedure follows from the safeness of the two steps, both the top-down traversal and the bottom-up traversal, as established by Lemma \ref{Lemma:allsafe}. This means that no HC-tree of $G=P^{(k)}$ has DC-cost higher than the tree output by the normalization procedure. This output tree is a factorized HC-tree{} since at its root node $r$ 
+every connected subgraph $P_i[r]$ of $G[r]$ is the prism $S_6$ and every prism at $r$ is split into two $S_3$'s, which are further split into the independent sets $S_2$ and $S_1$, as in Figure \ref{fig:prismvars}. This decomposition is thus the factorized \HCtree{}, of DC-cost $48k^2$.
+\end{proof}
+
+\section{Conclusion}
+
+We leave as an open problem the complexity of deciding if a graph is max or min well-behaved. A related question arises if we assume that we are given an  HC-tree $T$ of max DC-cost for a graph $H$ and also an integer $k$, and we ask for an HC-tree of max DC-cost for $H^{(k)}$. Note that the equivalent min DC-cost version of this problem, where adjacency denotes similarity, instead looks at the join of $k$ copies, i.e. a dense graph where an edge is added between any two vertices from distinct copies. It is not clear to us if these problems on $k$ copies are solvable in polynomial time, even though we assume an optimal HC-tree is given for a single copy.
+
+
+\bibliography{Hierarchical-Clustering}
+\bibliographystyle{plainurl}
+
+\end{document}
+
+
 
