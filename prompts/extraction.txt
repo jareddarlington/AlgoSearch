@@ -1,22 +1,18 @@
-You are given a research paper PDF. Extract every algorithm defined in the paper. If there are no defined algorithms, output "N/A".
+You are given the LaTeX source of a research paper. Extract every algorithm defined in the paper. If there are no defined algorithms, output "NO_ALGORITHMS_FOUND".
 
 For each algorithm, rewrite it exactly in LaTeX using the algorithm and algpseudocode packages. Use a consistent modern style with \begin{algorithm} and \begin{algorithmic}[1]. Use \Require for inputs, \Ensure for outputs, \State for steps, \gets for assignment, and \textsc{} for procedure names.
 
 The LaTeX algorithm must have the same number of steps as the original and use the same exact notation, variable names, and symbols. Do not add, remove, merge, or split steps. Preserve the original logic and ordering. Use LaTeX math symbols only (e.g., \zeta), not Unicode characters.
 
-Use the following as a formatting example:
-
-\begin{algorithm}
-\caption{MaCH}
-\begin{algorithmic}[1]
-    \Require Query hypergraph $q$, data hypergraph $H$
-    \Ensure All embeddings of $q$ in $H$
-    \State $C_{\text{ini}} \gets \textsc{BuildCandidateHyperedgeSpace}(q, H)$
-    \State \textsc{Filtering}(q, $C_{\text{ini}}$)
-    \State $M \gets \emptyset$
-    \State \textsc{MatchAndFilter}(q, H, C, M)
-\end{algorithmic}
-\end{algorithm}
+Use the following as a reference for formatting:
+\\begin{algorithm}
+\\caption{...}
+\\begin{algorithmic}[1]
+    \\Require ...
+    \\Ensure ...
+    \\State ...
+\\end{algorithmic}
+\\end{algorithm}
 
 After the LaTeX block, list and briefly describe every variable, parameter, and constant appearing in the algorithm.
 
@@ -24,3 +20,5 @@ Then write one concise paragraph describing what the algorithm does and its purp
 
 Output only the algorithm LaTeX, the variable list, and the description. Do not add commentary or extra formatting.
 
+LaTeX source:
+{latex}
