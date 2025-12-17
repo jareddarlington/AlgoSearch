@@ -1,16 +1,26 @@
-from outlines.models.transformers import Transformers
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 
-MODEL_NAME = ""
+MODEL_ID = "deepseek-ai/deepseek-coder-1.3b-instruct"
 
-model = Transformers(
-    AutoModelForCausalLM.from_pretrained(MODEL_NAME, device_map="auto"),
-    AutoTokenizer.from_pretrained(MODEL_NAME),
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+dtype = torch.float16 if device.type == "mps" else torch.float32  # safer fallback on CPU
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    dtype=dtype,
 )
+model.to(device)
 
-from outlines.generate import choice
-from typing import Literal
+inputs = tokenizer("The secret to baking a good cake is ", return_tensors="pt").to(device)
 
-generator = choice(model, ["Positive", "Negative", "Neutral"])
-sentiment = generator("Analyze: This product completely changed my life!")
-print(sentiment)
+with torch.no_grad():
+    out_ids = model.generate(
+        **inputs,
+        max_new_tokens=500,
+        do_sample=False,
+    )
+
+print(tokenizer.decode(out_ids[0], skip_special_tokens=True))

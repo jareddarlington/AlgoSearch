@@ -80,12 +80,12 @@ FILE NAME: Hierarchical_revised.tex
 
 \begin{abstract}
 % hierarchical clustering of a graph is a binary tree whose leaves are in 1-1 correspondence with the vertices of the graph.
-We study the complexity of finding an optimal hierarchical clustering of an unweighted similarity graph under the recently introduced Dasgupta objective function. 
-%Such clusterings are represented by a binary tree whose leaves are in 1-1 correspondence with the vertices of the graph. 
+We study the complexity of finding an optimal hierarchical clustering of an unweighted similarity graph under the recently introduced Dasgupta objective function.
+%Such clusterings are represented by a binary tree whose leaves are in 1-1 correspondence with the vertices of the graph.
 We introduce a proof technique, called the normalization procedure, that takes any such clustering of a graph $G$ and iteratively improves it until a desired target clustering of $G$ is reached.
-We use this technique to show both a negative and a positive complexity result. Firstly, we show that in general the problem is NP-complete. 
-%There are graph classes, e.g. co-bipartite graphs, where it is easy to find an optimal clustering. 
-%We show that computing an optimal hierarchical clustering of an unweighted similarity graph under the Dasgupta cost function is NP-complete. 
+We use this technique to show both a negative and a positive complexity result. Firstly, we show that in general the problem is NP-complete.
+%There are graph classes, e.g. co-bipartite graphs, where it is easy to find an optimal clustering.
+%We show that computing an optimal hierarchical clustering of an unweighted similarity graph under the Dasgupta cost function is NP-complete.
 Secondly, we consider min-well-behaved graphs, which are graphs $H$ having the property that for any $k$ the graph $H^{(k)}$ being the join of $k$ copies of $H$ has an optimal hierarchical clustering that splits each copy of $H$ in the same optimal way. To optimally cluster such a graph $H^{(k)}$ we thus only need to optimally cluster the smaller graph $H$.
 Co-bipartite graphs are min-well-behaved, but otherwise they seem to be scarce. We use the normalization procedure to show that also the cycle on 6 vertices is min-well-behaved.
 \end{abstract}
@@ -94,35 +94,35 @@ Co-bipartite graphs are min-well-behaved, but otherwise they seem to be scarce. 
 
 %A common framework for defining graph width parameters, like rank-width and mim-width, is by a branch decomposition over the vertex set. This is a natural hierarchical clustering of a graph $G$, represented as a binary tree with the vertices of $G$ at its leaves. The tree is used for solving optimization problems on $G$, by a bottom-up traversal, gathering solutions to subgraphs of $G$ induced by the vertices mapped to leaves of the subtrees. In a good tree the bipartite graphs giving the adjacencies between such subgraphs and the rest of the graph should be easy to describe, e.g. for use with rank-width its adjacency matrix should have low rank.  Such decompositions of graphs are also used in the area of clustering, and recently an objective function, Dasgupta's objective, was introduced to measure their quality. In this paper we investigate some combinatorial questions arising from this function.
 
-Clustering is an unsupervised machine learning technique and one of the most important problems in data-mining~\cite{Har75,CEF+06,KT09,HTF09}. Given a data set and a pairwise similarity measure, the task is to partition the data set into clusters so that similar data points belong to the same cluster.  
-%Such a partition is known as \emph{flat clustering}. 
-%A plethora of clustering heuristics have been developed, including \emph{agglomerative heuristics} such as single-linkage, average-linkage and \emph{partitioning heuristics} such as sparsest-cut amd k-means (see \cite{Har75}, or Chapter 14 of~\cite{HTF09} for example). 
-%Sanjoy Dasgupta. A cost function for similarity-based hierarchical clustering. In Proceedings of the 48th Annual ACM SIGACT Symposium on Theory of Computing, STOC 2016, pages 118–127,2016. 
+Clustering is an unsupervised machine learning technique and one of the most important problems in data-mining~\cite{Har75,CEF+06,KT09,HTF09}. Given a data set and a pairwise similarity measure, the task is to partition the data set into clusters so that similar data points belong to the same cluster.
+%Such a partition is known as \emph{flat clustering}.
+%A plethora of clustering heuristics have been developed, including \emph{agglomerative heuristics} such as single-linkage, average-linkage and \emph{partitioning heuristics} such as sparsest-cut amd k-means (see \cite{Har75}, or Chapter 14 of~\cite{HTF09} for example).
+%Sanjoy Dasgupta. A cost function for similarity-based hierarchical clustering. In Proceedings of the 48th Annual ACM SIGACT Symposium on Theory of Computing, STOC 2016, pages 118–127,2016.
 %[CKM+19] Vincent Cohen-Addad, Varun Kanade, Frederik Mallmann-Trenn, Claire Mathieu: Hierarchical Clustering: Objective Functions and Algorithms. J. ACM 66(4): 26:1-26:42 (2019)
 %Moses Charikar and Vaggos Chatziafratis. Approximate hierarchical clustering via sparsest cut and spreading metrics. In Proceedings of the Twenty-Eighth Annual ACM- SIAM Symposium on Discrete Algorithms, SODA 2017, pages 841–854, 2017.
 %In contrast to the flat clustering problem, i
-In a \emph{hierarchical clustering} the data set is recursively partitioned into smaller clusters, by means of a rooted binary tree whose leaves are in one-to-one correspondence with the data points. Hierarchical clustering emerged as a central task in the study of phylogenetic trees~\cite{SS63,Bun71}. Such a clustering is very general, capturing clustering structure at all levels of granularity, with a clustering into two parts given by the root of the tree, and finer clusterings given by lower levels of the tree. Algorithms for hierarchical clustering have been widely used for many years, but it was only recently that an objective function to measure their quality was formalized. In a STOC 2017 paper 
+In a \emph{hierarchical clustering} the data set is recursively partitioned into smaller clusters, by means of a rooted binary tree whose leaves are in one-to-one correspondence with the data points. Hierarchical clustering emerged as a central task in the study of phylogenetic trees~\cite{SS63,Bun71}. Such a clustering is very general, capturing clustering structure at all levels of granularity, with a clustering into two parts given by the root of the tree, and finer clusterings given by lower levels of the tree. Algorithms for hierarchical clustering have been widely used for many years, but it was only recently that an objective function to measure their quality was formalized. In a STOC 2017 paper
 %their theoretical study was hampered by the lack of an objective function they are trying to optimize.
-%But how to measure the quality of the hierarchical clustering? 
-%A common approach is to evaluate the quality in terms of costs of flat clusterings induced by the hierarchical clustering. For example, one could consider as the cost, the maximum radius of a cluster among every $k$-clustering induced by a hierarchical clustering~\cite{DP05}. 
+%But how to measure the quality of the hierarchical clustering?
+%A common approach is to evaluate the quality in terms of costs of flat clusterings induced by the hierarchical clustering. For example, one could consider as the cost, the maximum radius of a cluster among every $k$-clustering induced by a hierarchical clustering~\cite{DP05}.
 %Surprisingly, this question was has been formalized as a combinatorial optimization problem on the hierarchical clustering itself. In
 ~\cite{Das16} Dasgupta introduced a natural objective function measuring the global cost of a hierarchical clustering. From now on, this function will be called the Dasgupta Clustering function - DC function. Several follow-ups to Dasgupta's work have appeared, we mention only a couple: in~\cite{CC17}, the authors improve the ratio of the approximation algorithm proposed by Dasgutpa;  in~\cite{CKM+19}, the authors revisit the DC function and propose some axioms that a "good" cost function should satisfy.
 
-In this paper we investigate the complexity of finding the DC-optimal hierarchical clustering for {\em unweighted} similarity graphs. Thus, we assume that any pair of data points has been marked as either 'similar' or 'non-similar' and represent this information as an undirected, unweighted graph $G$ whose vertex set $V(G)$ is the set of data points and adjacencies represent similarity. We ask for an \HCtree{} (a Hierarchical Clustering tree), a rooted binary tree $T$ with leaves in one-to-one correspondence with $V(G)$, such that the DC-cost of $T$ - i.e. the sum over all edges $uv$ of $G$, of the number of leaves of the subtree rooted at the least common ancestor of $u$ and $v$ - is minimized. 
-Dasgupta \cite{Das16} showed that the edge-weighted version of this problem, with weights representing degree of similarity, is NP-complete. In this paper we focus on unweighted graphs, the hardness of which was left open by Dasgupta~\cite{Das19}. 
-Unweighted graphs naturally appear in this context, for example in the correlation clustering problem~\cite{BBC04}. It is also a common approach 
-%in the context of clustering algorithms 
+In this paper we investigate the complexity of finding the DC-optimal hierarchical clustering for {\em unweighted} similarity graphs. Thus, we assume that any pair of data points has been marked as either 'similar' or 'non-similar' and represent this information as an undirected, unweighted graph $G$ whose vertex set $V(G)$ is the set of data points and adjacencies represent similarity. We ask for an \HCtree{} (a Hierarchical Clustering tree), a rooted binary tree $T$ with leaves in one-to-one correspondence with $V(G)$, such that the DC-cost of $T$ - i.e. the sum over all edges $uv$ of $G$, of the number of leaves of the subtree rooted at the least common ancestor of $u$ and $v$ - is minimized.
+Dasgupta \cite{Das16} showed that the edge-weighted version of this problem, with weights representing degree of similarity, is NP-complete. In this paper we focus on unweighted graphs, the hardness of which was left open by Dasgupta~\cite{Das19}.
+Unweighted graphs naturally appear in this context, for example in the correlation clustering problem~\cite{BBC04}. It is also a common approach
+%in the context of clustering algorithms
 to transform a similarity matrix into a similarity graph by fixing a threshold value that determines whether two objects are similar or not (see~\cite{Har75} for example). We focus on dense similarity graphs.
 %I WILL ALSO CHECK THE BOOK OF STEEL AND SAMPLE ON PHYLOGENETIC TOMORROW MORNING.
-Such graphs typically appear when there is a fixed threshold for similarity that is set to be very low, for example the existence of email correspondence within a single (small) organization, or existence of non-zero trade relations between countries. 
+Such graphs typically appear when there is a fixed threshold for similarity that is set to be very low, for example the existence of email correspondence within a single (small) organization, or existence of non-zero trade relations between countries.
 We show that the problem remains NP-complete, already for dense graphs. More precisely, by a reduction building on the one used in \cite{Das16}, we establish the NP-hardness for unweighted $n$-vertex graphs where every vertex has at least $n-6$ neighbours.
 
-Note that all pairs of vertices will be split into distinct clusters at some point in the HC-tree, namely at their least common ancestor. Minimizing the DC-cost encourages pairs of adjacent vertices (similar data points) to be split lower in the tree than non-adjacent vertex pairs (non-similar data points). For example, if $G$ is the complement of a bipartite graph on color classes $A, B$ then any HC-tree $T$ that splits $A$ and $B$ at the root is optimal, which follows easily from observations in \cite{Das16} since $G[A]$ and $G[B]$ are complete graphs. 
+Note that all pairs of vertices will be split into distinct clusters at some point in the HC-tree, namely at their least common ancestor. Minimizing the DC-cost encourages pairs of adjacent vertices (similar data points) to be split lower in the tree than non-adjacent vertex pairs (non-similar data points). For example, if $G$ is the complement of a bipartite graph on color classes $A, B$ then any HC-tree $T$ that splits $A$ and $B$ at the root is optimal, which follows easily from observations in \cite{Das16} since $G[A]$ and $G[B]$ are complete graphs.
 %XTOF: It is rather because $G[A]$ and $G[B]$ are distinct connected components, right ?
 Dasgupta showed that minimizing the DC-cost of $G$ is equivalent to maximizing the DC-cost of the complement of $G$. Thus the previous result can be restated to say that for a bipartite graph any HC-tree splitting the two color classes at the root will have max DC-cost, rendering the result trivial as all edges are now split at the root.
 In the current paper we will usually take this viewpoint, thus considering {\em unweighted sparse} graphs and looking for an HC-tree {\em maximizing} the DC-cost, typically splitting pairs of adjacent vertices, now denoting non-similarity, at higher levels of the tree.
 
-As noted, bipartite graphs are then trivial, but what other graphs can be handled efficiently? What about $G$ being a collection of disjoint copies of the same bipartite graph? Maximizing DC-cost is still trivial, in fact $G$ is again bipartite, so at the root we can simply split each copy in the same optimal way. Let us define a more complex property generalizing this behavior. Consider a graph $H$ of max DC-cost $W$ achievable by some HC-tree $T$ and let the graph $H^{(k)}$ consist of $k$ disjoint copies of $H$. If we use $T$ to simultaneously cluster each of the $k$ copies of $H$ then each leaf of $T$ will contain $k$ copies of the same vertex. These vertices induce a stable set so we can further cluster them in an arbitrary way to get an HC-tree $T^{(k)}$. Note that this tree will have DC-cost $k^2W$ since each edge of $H$ has $k$ copies in $H^{(k)}$, and the subtree of $T^{(k)}$ that splits an edge contains a multiplicative factor $k$ more vertices than the similar subtree of $T$. We call such $H$ max-well-behaved if for any $k$ the max DC-cost of $H^{(k)}$ is no higher than $k^2t$, and the complement of $H$ min-well-behaved. 
+As noted, bipartite graphs are then trivial, but what other graphs can be handled efficiently? What about $G$ being a collection of disjoint copies of the same bipartite graph? Maximizing DC-cost is still trivial, in fact $G$ is again bipartite, so at the root we can simply split each copy in the same optimal way. Let us define a more complex property generalizing this behavior. Consider a graph $H$ of max DC-cost $W$ achievable by some HC-tree $T$ and let the graph $H^{(k)}$ consist of $k$ disjoint copies of $H$. If we use $T$ to simultaneously cluster each of the $k$ copies of $H$ then each leaf of $T$ will contain $k$ copies of the same vertex. These vertices induce a stable set so we can further cluster them in an arbitrary way to get an HC-tree $T^{(k)}$. Note that this tree will have DC-cost $k^2W$ since each edge of $H$ has $k$ copies in $H^{(k)}$, and the subtree of $T^{(k)}$ that splits an edge contains a multiplicative factor $k$ more vertices than the similar subtree of $T$. We call such $H$ max-well-behaved if for any $k$ the max DC-cost of $H^{(k)}$ is no higher than $k^2t$, and the complement of $H$ min-well-behaved.
 
 \begin{figure}[t]
 \centering
@@ -239,28 +239,28 @@ leaf2/.style={circle,draw=red,fill=red,inner sep=0pt,minimum size=1.5mm}]
 is not max-well-behaved. We have $\DCcost(Q_{2,3},T)= 6 \times 5 + 1 \times 2 = 32$ which is the maximum possible. The HC-tree $T'$ of $Q_{2,3}^{(k)}$ with $k=2$ (vertices $s_1,c_1,...$ in one copy and $s'_1,c'_1,...$ in the other copy) satisfies $\DCcost(Q_{2,3}^{(k)},T')=130$ which is larger than $\DCcost(Q_{2,3},T)\times k^2=128$, i.e. the DC-cost of the factorized \HCtree{} clustering both copies according to $T$ simultaneously. }\label{fig:max-well-behave}
 \end{figure}
 
-We have argued that any bipartite graph is max-well-behaved, but this is not the case for all $H$. 
-For a simple example, in Figure 1 we see that complete split graphs are not max-well-behaved. 
-In this paper, as a spin-off of our NP-completeness proof, we initiate the study of well-behaved graphs. We introduce a normalization procedure that makes incremental changes to a given HC-tree of some $H^{(k)}$, while observing monotonicity in the DC-cost, to arrive at a new HC-tree showing that $H$ is well-behaved. We employ this to show that the prism graph (the complement of a 6-cycle) is max-well-behaved, and thus $C_6$ min-well-behaved, establishing  the aforementioned NP-completeness along the way. 
+We have argued that any bipartite graph is max-well-behaved, but this is not the case for all $H$.
+For a simple example, in Figure 1 we see that complete split graphs are not max-well-behaved.
+In this paper, as a spin-off of our NP-completeness proof, we initiate the study of well-behaved graphs. We introduce a normalization procedure that makes incremental changes to a given HC-tree of some $H^{(k)}$, while observing monotonicity in the DC-cost, to arrive at a new HC-tree showing that $H$ is well-behaved. We employ this to show that the prism graph (the complement of a 6-cycle) is max-well-behaved, and thus $C_6$ min-well-behaved, establishing  the aforementioned NP-completeness along the way.
 
 \section{Preliminaries}
-We use standard graph-theoretic notation \cite{Die05}. 
+We use standard graph-theoretic notation \cite{Die05}.
 A hierarchical clustering of a similarity graph $G = (V,E)$ is a full rooted binary tree $T$, together with a bijection $\delta$ from $V$ to $L(T)$, the set of leaves of $T$. We call such a pair $(T, \delta)$ an HC-tree of $G$. For a node $t$ of $T$ we denote by $T[t]$ the subtree of $T$ rooted at $t$.
 The Dasgupta cost function \cite{Das16} is this (lca means least common ancestor):
 $$\DCcost(G,(T,\delta)) = \sum_{uv\in E}w(uv)\cdot|L(T[x])|:x\text{ is the lca of }\delta(u)\text{ and }\delta(v)$$
-and an HC-tree of minimum DC-cost (under Dasgupta's objective function) is thus an HC-tree $(T^*,\delta^*)$ that minimizes DC-cost. 
+and an HC-tree of minimum DC-cost (under Dasgupta's objective function) is thus an HC-tree $(T^*,\delta^*)$ that minimizes DC-cost.
 %The intuition behind this objective is clear: In any form of clustering, we want similar items (i.e. adjacent vertices) to appear in some cluster that does not include less similar items. In a hierarchical clustering, we must eventually split every vertex apart, but minimizing this function should ensure that heavy edges and/or dense subgraphs are split apart at the very end.
 
 Dasgupta shows that any HC-tree with minimum weight for graph $G$ is also an HC-tree with maximum weight for its complement $\overline{G}$.
 %XTOF: the previous sentence corresponds to Corollary 1. I would remove it.
-%, so maximizing the cost function is equally hard as minimizing it (\cite{Das16}, Section 4.1) in the general case. 
-We consider only unweighted graphs, equivalently $w(uv)=1$ for all $uv \in E$ and $0$ otherwise. 
+%, so maximizing the cost function is equally hard as minimizing it (\cite{Das16}, Section 4.1) in the general case.
+We consider only unweighted graphs, equivalently $w(uv)=1$ for all $uv \in E$ and $0$ otherwise.
 %This can be seen as a very crude measure of the relationship between objects – either two items are similar, or they are not.\\
 %The following notation is related to subtrees of an HC-tree $(T,\delta)$ and the subgraphs of $G$ induced by these subtrees.\\
-%Let $G$ be any unweighted graph, and $(T,\delta)$ a hierarchical clustering of $G$. 
+%Let $G$ be any unweighted graph, and $(T,\delta)$ a hierarchical clustering of $G$.
 For any node $t\in T$, we define $G_{(T,\delta)}[t]$ as the subgraph of $G$ induced by $\delta^{-1}(L(T[t]))$, the vertices of $G$ mapped to leaves in $T[t]$.
-%, or more formally $$G_{(T,\delta)}[t] = G[\{\delta^{-1}(s):s\in L(T[t])\}]$$ where $G[S]$ is the \emph{induced subgraph} of $G$ on vertex set $S$. 
-Similarly, for any two nodes $t_1,t_2\in T$ with $L[t_1]\cap L[t_2] = \emptyset$, we define $G_{(T,\delta)}[t_1,t_2]$ 
+%, or more formally $$G_{(T,\delta)}[t] = G[\{\delta^{-1}(s):s\in L(T[t])\}]$$ where $G[S]$ is the \emph{induced subgraph} of $G$ on vertex set $S$.
+Similarly, for any two nodes $t_1,t_2\in T$ with $L[t_1]\cap L[t_2] = \emptyset$, we define $G_{(T,\delta)}[t_1,t_2]$
 as the bipartite subgraph of $G$ consisting of all edges with one endpoint in  $\delta^{-1}(L(T[t_1]))$ and the other endpoint in $\delta^{-1}(L(T[t_2]))$.
 %= G[V(G_{(T,\delta)}[t_1]),V(G_{(T,\delta)}[t_2])]$$
 %where $G[S_1,S_2]$ is the \emph{induced bipartite subgraph} of $G$ on disjoint vertex sets $S_1,S_2$. We will always assume that $t_1$ and $t_2$ are siblings in $T$, but in principle, they do not have to be.
@@ -290,7 +290,7 @@ An HC-tree of $G$ with minimum DC-cost is also an \HCtree{} of $\overline{G}$ wi
 \end{corollary}
 
 \begin{proof}
-$\overline{G}$ is by definition edge-disjoint from $G$, therefore 
+$\overline{G}$ is by definition edge-disjoint from $G$, therefore
 $\DCcost(G^U,(T,\delta)) = \\ \DCcost(G,(T,\delta))+\DCcost(\overline{G},(T,\delta))$
 by Property \ref{Fact:EdgeDisjSum}. But the union of $G$ and $\overline{G}$ is isomorphic to $K_n$ where $n=|V(G)|$, and we know that every \HCtree{} of $K_n$ has the same cost, namely $\frac{1}{3}(n^3-n)$ (\cite{Das16}, Theorem 3). Therefore, for any \HCtree{} $(T,\delta)$,
 $\DCcost(\overline{G},(T,\delta)) = \frac{1}{3}(n^3-n)-\DCcost(G,(T,\delta))$.
@@ -308,7 +308,7 @@ However, maximizing the DC-cost for $G^{(k)}$ seems harder. Given an HC-tree $T$
 \begin{definition}[Factorized \HCtree]
 Let $G$ be a graph, $(T,\delta)$ an HC-tree of $G$ of maximum DC-cost $W$, and $k$ a natural number. A \emph{factorized \HCtree} $(T,\delta)^{(k)}$ of the graph $G^{(k)}$ is made as follows: Make a copy of $(T,\delta)$ and for every node $t$, make
 $$G^{(k)}_{(T,\delta)^{(k)}}[t] = \bigcup_{i=1}^k G_{(T,\delta)}[t]$$
-This is not a complete \HCtree{}, since for $t\in L(T)$, $G^{(k)}[t]$ is not a single vertex, but $k$ vertices. But these $k$ vertices are all disjoint, therefore any extension of this partial \HCtree{} will have the same DC-cost $k^2W$ and be regarded as a factorized \HCtree{}. 
+This is not a complete \HCtree{}, since for $t\in L(T)$, $G^{(k)}[t]$ is not a single vertex, but $k$ vertices. But these $k$ vertices are all disjoint, therefore any extension of this partial \HCtree{} will have the same DC-cost $k^2W$ and be regarded as a factorized \HCtree{}.
 \end{definition}
 
 As previously mentioned, if $G$ is bipartite then for any $k$ the factorized \HCtree{} for $G^{(k)}$ will have max DC-cost. We give this property a name.
@@ -482,7 +482,7 @@ This result is non-trivial, and should be seen in light of e.g. the five-vertex 
 \section{NP-Hardness for Unweighted Graphs}
 
 %Dasgupta proved in his paper that finding an optimal hierarchical clustering (minimum or maximum) of general (weighted) graphs is NP-hard (\cite{Das16}, Section 4), which is hardly surprising. We already know by Lemma \ref{Lemma:MinMaxEquiv} that minimizing and maximizing the cost is equally hard.
-Dasgupta shows that for edge-weighted graphs, finding an HC-tree of maximum DC-cost is NP-hard, by reduction 
+Dasgupta shows that for edge-weighted graphs, finding an HC-tree of maximum DC-cost is NP-hard, by reduction
 from an NP-complete problem he called NAESAT*:
 
 \begin{definition}[NAESAT*]
@@ -506,11 +506,11 @@ We will assume, as Dasgupta \cite{Das19} does, that if there is a 2-clause $C$ w
 %Therefore, the problem of finding Not-All-Equal-satisfying assignments to this subset of NAESAT* is also NP-complete.
 
 
-Dasgupta's reduction to hierarchical clustering takes as input a NAESAT* formula $\varphi$ on $n$ variables with $m=\frac{1}{3}n$ 3-clauses and $m'\leq n$ 2-clauses, and constructs a graph $G$ with two vertices for each variable $x$ appearing in the formula $\varphi$: one corresponding to $x$ and one to $\overline{x}$. For every 2-clause $(\tilde{x}\vee\tilde{y})$, where a variable with a tilde above, $\tilde{x}$, is shorthand for "$x$ or $\overline{x}$", he adds an edge between $\tilde{x}$ and $\tilde{y}$, and also between $\overline{\tilde{x}}$ and $\overline{\tilde{y}}$ (these $2m'$ edges are called the \emph{2-clause edges}). For every 3-clause $(\tilde{x}\vee\tilde{y}\vee\tilde{z})$, he adds a triangle between $\tilde{x}$, $\tilde{y}$ and $\tilde{z}$, and also between $\overline{\tilde{x}}$, $\overline{\tilde{y}}$ and $\overline{\tilde{z}}$ (these $6m$ edges are called the \emph{3-clause edges}). In addition, he adds one edge between $x$ and $\overline{x}$ for every variable (these $n$ edges are called the \emph{matching edges}). He shows that $\varphi$ is in NAESAT* if and only if $G$ has {\em weighted} DC-cost at least $M$ (for some fixed $M$ that we do not specify here). Let us see how this comes about. Given a not-all-equal assignment of truth values to the $n$ variables of $\varphi$, he constructs an HC-tree of $G$ 
+Dasgupta's reduction to hierarchical clustering takes as input a NAESAT* formula $\varphi$ on $n$ variables with $m=\frac{1}{3}n$ 3-clauses and $m'\leq n$ 2-clauses, and constructs a graph $G$ with two vertices for each variable $x$ appearing in the formula $\varphi$: one corresponding to $x$ and one to $\overline{x}$. For every 2-clause $(\tilde{x}\vee\tilde{y})$, where a variable with a tilde above, $\tilde{x}$, is shorthand for "$x$ or $\overline{x}$", he adds an edge between $\tilde{x}$ and $\tilde{y}$, and also between $\overline{\tilde{x}}$ and $\overline{\tilde{y}}$ (these $2m'$ edges are called the \emph{2-clause edges}). For every 3-clause $(\tilde{x}\vee\tilde{y}\vee\tilde{z})$, he adds a triangle between $\tilde{x}$, $\tilde{y}$ and $\tilde{z}$, and also between $\overline{\tilde{x}}$, $\overline{\tilde{y}}$ and $\overline{\tilde{z}}$ (these $6m$ edges are called the \emph{3-clause edges}). In addition, he adds one edge between $x$ and $\overline{x}$ for every variable (these $n$ edges are called the \emph{matching edges}). He shows that $\varphi$ is in NAESAT* if and only if $G$ has {\em weighted} DC-cost at least $M$ (for some fixed $M$ that we do not specify here). Let us see how this comes about. Given a not-all-equal assignment of truth values to the $n$ variables of $\varphi$, he constructs an HC-tree of $G$
 by first splitting $V(G)$ evenly at the root into True literals and False literals and then  splitting all remaining edges at the next level.
 %as follows:
 %\begin{enumerate}
-%\item Split $V(G)$ evenly at the root into True literals and False literals. 
+%\item Split $V(G)$ evenly at the root into True literals and False literals.
 %\item Split all remaining edges at the next level.
 %\end{enumerate}
 
@@ -525,13 +525,13 @@ Let the graph $G$ constructed by the Dasgupta reduction when given $\varphi$ be 
 
 It remains to show that an HC-tree not splitting $V(G)$ evenly at the top will have DC-cost less than $W^*$. To this purpose, we partition the edges of $G$ into two subgraphs $G'$ and $G''$, with $G'$ being the graph containing only the $2m'$ 2-clause edges, and $G''$ containing the 3-clause edges and matching edges. We observe that the 3-clause edges comprise $2m$ disjoint triangles, and that the matching edges bind together pairs of triangles, as shown in Figure \ref{fig:prismvars}. This means that $G''$ is a collection of $m$ disjoint prisms.
 The graph $G'$ is also easy to describe; every variable appears in either one or two 2-clauses. It will belong to a single 2-clause when there was a 2-clause $C$ whose literals also appeared with reversed polarity in a 2-clause $C'$ and $C'$ was removed, otherwise it will belong to two 2-clauses.
-%, and  if $\varphi$ contains two 2-clauses of the type $(\tilde{x}\vee\tilde{y}),(\overline{\tilde{x}}\vee\overline{\tilde{y}})$ then we have an isolated edge, 
-Thus $G'$ will be a collection of  disjoint components that are 
-1-regular (single edges) or 
+%, and  if $\varphi$ contains two 2-clauses of the type $(\tilde{x}\vee\tilde{y}),(\overline{\tilde{x}}\vee\overline{\tilde{y}})$ then we have an isolated edge,
+Thus $G'$ will be a collection of  disjoint components that are
+1-regular (single edges) or
 2-regular (cycles). Since $G'$ is a collection of edges and cycles it is easy to see that no HC-tree whose root is an uneven split can cut all its $2m'$ edges at the top.
 From Property \ref{Fact:EdgeDisjSum} we know that
 for an HC-tree $(T,\delta)$ of $G$ we have
- $\DCcost(G,(T,\delta))=\DCcost(G',(T,\delta))+ \DCcost(G'',(T,\delta))$. Thus, for an uneven \HCtree{} $(T,\delta)$ of $G$ to have cost at least $W^*$, then $\DCcost(G'',(T,\delta)')$ must be strictly higher than $W^*-4nm'$ since $G'$ would contribute less than $4nm'$. By the equality $n=3m$, we get 
+ $\DCcost(G,(T,\delta))=\DCcost(G',(T,\delta))+ \DCcost(G'',(T,\delta))$. Thus, for an uneven \HCtree{} $(T,\delta)$ of $G$ to have cost at least $W^*$, then $\DCcost(G'',(T,\delta)')$ must be strictly higher than $W^*-4nm'$ since $G'$ would contribute less than $4nm'$. By the equality $n=3m$, we get
 $$W^*-4nm' = 10mn+2n^2 = 30m^2+18m^2 = 48m^2$$
  so that $G''$ must contribute more than $48m^2$. But our main Lemma \ref{Lemma:PrismMax} showing that the prism is well-behaved, implies that $48m^2$ is the maximum cost achievable for $G''$ being $m$ copies of the prism. It must then be the case that there is no uneven \HCtree{} of $G$ with cost at least $W^*$.
 
@@ -549,8 +549,8 @@ We conclude that there exists an HC-tree of $G$ with weight at least $10nm+4nm'+
 
 \section{The Normalization Procedure} \label{Sct:Proc}
 We give a normalization procedure for $G=P^{(k)}=P_1\cup P_2\cup\ldots\cup P_k$ consisting of $k$ disjoint copies of the prism $P$. This procedure takes as input an HC-tree for $G$, performs a series of safe operations, and outputs a factorized \HCtree{} where every prism is clustered according to the evenly balanced HC-tree $T$ in Figure \ref{fig:prismvars}.
-We could have done this naively by a single Bottom-Up traversal of the tree, performing some PowerfulBalancing operation on each node $t$ of the tree. For every possible split of a subgraph of a prism at node $t$, PowerfulBalancing would have to perform a safe operation that changes this split into one that is closer to the desired end goal. 
-However, the number of subgraphs of a prism, and the number of distinct splits of these subgraphs is very high, 11 and 83 respectively. Thus the naive PowerfulBalancing is not a practical option to try and prove that the prism is well-behaved. Instead, our normalization procedure will lower the number of distinct subgraphs and splits of these subgraphs that appear in a node of the tree before doing the Balancing.  In total, we employ 3 subroutines at each node $t$ of the tree: 
+We could have done this naively by a single Bottom-Up traversal of the tree, performing some PowerfulBalancing operation on each node $t$ of the tree. For every possible split of a subgraph of a prism at node $t$, PowerfulBalancing would have to perform a safe operation that changes this split into one that is closer to the desired end goal.
+However, the number of subgraphs of a prism, and the number of distinct splits of these subgraphs is very high, 11 and 83 respectively. Thus the naive PowerfulBalancing is not a practical option to try and prove that the prism is well-behaved. Instead, our normalization procedure will lower the number of distinct subgraphs and splits of these subgraphs that appear in a node of the tree before doing the Balancing.  In total, we employ 3 subroutines at each node $t$ of the tree:
 \begin{itemize}
     \item Cut Optimization: ensures that every sub-prism split at $t$ involves one of the 6 subgraphs given in Figure \ref{fig:optsub} and is split according to one of 8 specific splits plus 6 distinct mirror-images.
     %XTOF: I would tell that this is done by identifying safe vertex exchanges
@@ -702,10 +702,10 @@ Note that every subgraph in $T'[c_l]$ and $T'[c_r]$ is still fully normalized, s
 
 \subsection{Balancing the \HCtree{}}\label{Sct:Balance}
 
-Let $t$ be a node of \HCtree{} $(T,\delta)$ on which we have just performed Left-Heavy Distribution. 
-This means that every split at a node $t$ is optimal and left-heavy, and also that we have performed Balancing on both its children $c_l,c_r$, so that $T[c_l],T[c_r]$ are both fully normalized. 
+Let $t$ be a node of \HCtree{} $(T,\delta)$ on which we have just performed Left-Heavy Distribution.
+This means that every split at a node $t$ is optimal and left-heavy, and also that we have performed Balancing on both its children $c_l,c_r$, so that $T[c_l],T[c_r]$ are both fully normalized.
 In the Balancing step we fully normalize $T[t]$.
-Since splits at the children are left-heavy, there are 12 possible splits of sub-prisms at $t$ before we perform Balancing.  These are the 8 in Figure \ref{fig:optsplit} plus 4 not cutting any edge. 4 of these 12 (the first 4 in below) are as even as possible, while 8 are uneven. 
+Since splits at the children are left-heavy, there are 12 possible splits of sub-prisms at $t$ before we perform Balancing.  These are the 8 in Figure \ref{fig:optsplit} plus 4 not cutting any edge. 4 of these 12 (the first 4 in below) are as even as possible, while 8 are uneven.
 
 \begin{minipage}[ht!]{0.5\textwidth}
 \begin{itemize}
@@ -748,7 +748,7 @@ In the bottom-up traversal the Balancing operations collectively contribute to m
 \end{lemma}
 
 \begin{proof}
-Assume Balancing has been performed at a node $t$ as explained above, with the letters $a,...,d,a',...h'$ denoting the number of sub-prisms before the Balancing of each of the 12 types. 
+Assume Balancing has been performed at a node $t$ as explained above, with the letters $a,...,d,a',...h'$ denoting the number of sub-prisms before the Balancing of each of the 12 types.
 To calculate the change in cost, we must look at the sizes of subgraphs of $G[t]$, with $A$ the number of leaves of the subtree rooted at left child before Balancing at $t$ and $A'$ this number after the balancing at $t$, and similarly for $B,B',C$ (remember that $(T,\delta)$ is the tree before this step and $(T',\delta')$ is the modified \HCtree{}):
 
 \begin{itemize}
@@ -808,11 +808,11 @@ The top-down traversal of $(T,\delta)$ in which Cut Optimization is performed is
 
 
 \begin{proof}
-Lemma \ref{Lemma:safepart1} has already established that the top-down traversal consists of a series of safe operations and is therefore itself a safe operation, i.e. the DC-cost of the HC-tree that was given as input is no higher than the DC-cost of the HC-tree after top-down traversal. 
-By Lemma \ref{Lemma:safepart2} the Left-heavy Distribution on each node is also safe. By Lemma \ref{Lemma:safepart3} the combined result of all the Balancing operations together imply that the bottom-up traversal is also a safe operation, i.e. the DC-cost of the HC-tree resulting from the top-down traversal does not have DC-cost higher than the DC-cost of the HC-tree after the bottom-up traversal. 
+Lemma \ref{Lemma:safepart1} has already established that the top-down traversal consists of a series of safe operations and is therefore itself a safe operation, i.e. the DC-cost of the HC-tree that was given as input is no higher than the DC-cost of the HC-tree after top-down traversal.
+By Lemma \ref{Lemma:safepart2} the Left-heavy Distribution on each node is also safe. By Lemma \ref{Lemma:safepart3} the combined result of all the Balancing operations together imply that the bottom-up traversal is also a safe operation, i.e. the DC-cost of the HC-tree resulting from the top-down traversal does not have DC-cost higher than the DC-cost of the HC-tree after the bottom-up traversal.
 \end{proof}
 
-%We are ready to prove the previously mentioned Lemma 5. 
+%We are ready to prove the previously mentioned Lemma 5.
 
 \begin{customlemma}{5}
 The prism $P$ is max-well-behaved, and thus $C_6$ is min-well-behaved.
@@ -820,7 +820,7 @@ The prism $P$ is max-well-behaved, and thus $C_6$ is min-well-behaved.
 
 
 \begin{proof}
-We have demonstrated a safe normalization procedure that works for any $k$ and any HC-tree of $G=P^{(k)}$ as described by Property \ref{Fact:ExistsProc}. Safeness of the procedure follows from the safeness of the two steps, both the top-down traversal and the bottom-up traversal, as established by Lemma \ref{Lemma:allsafe}. This means that no HC-tree of $G=P^{(k)}$ has DC-cost higher than the tree output by the normalization procedure. This output tree is a factorized HC-tree{} since at its root node $r$ 
+We have demonstrated a safe normalization procedure that works for any $k$ and any HC-tree of $G=P^{(k)}$ as described by Property \ref{Fact:ExistsProc}. Safeness of the procedure follows from the safeness of the two steps, both the top-down traversal and the bottom-up traversal, as established by Lemma \ref{Lemma:allsafe}. This means that no HC-tree of $G=P^{(k)}$ has DC-cost higher than the tree output by the normalization procedure. This output tree is a factorized HC-tree{} since at its root node $r$
 every connected subgraph $P_i[r]$ of $G[r]$ is the prism $S_6$ and every prism at $r$ is split into two $S_3$'s, which are further split into the independent sets $S_2$ and $S_1$, as in Figure \ref{fig:prismvars}. This decomposition is thus the factorized \HCtree{}, of DC-cost $48k^2$.
 \end{proof}
 
