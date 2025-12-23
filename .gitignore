@@ -1,3 +1,5 @@
 .venv/
 /models
 /.cache
+.env
+/data/algorithms
