@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-extractor.py
+extract_algorithms.py
 
 Extract algorithm records from LaTeX sources using the Gemini API
 with structured JSON output.
 
 Usage:
-python ./src/extractor.py --input_dir ./data/temp --papers_db ./data/papers.db --algorithms_db ./data/algorithms.db --model gemini-2.5-flash
+python ./src/extract_algorithms.py --input_dir ./data/temp --papers_db ./data/papers.db --algorithms_db ./data/algorithms.db --model gemini-2.5-flash
 """
+
+# TODO: consider using two prompts for description + latex instead of all together
 
 import argparse
 import hashlib
@@ -222,6 +224,64 @@ def extract_response_text(response: Dict[str, Any]) -> str:
     return "".join(texts)
 
 
+def try_salvage_partial_json(text: str) -> Optional[Dict[str, Any]]:
+    """Attempt to salvage complete algorithms from truncated JSON.
+
+    When the response is truncated due to MAX_TOKENS, we might have several
+    complete algorithm objects followed by an incomplete one. This function
+    finds the last complete algorithm and cuts off everything after it.
+    """
+    try:
+        # Find where the algorithms array starts
+        if '"algorithms"' not in text:
+            return None
+
+        # Find the start of the algorithms array
+        array_start = text.find('"algorithms"')
+        if array_start == -1:
+            return None
+
+        # Find the opening bracket of the array
+        bracket_start = text.find('[', array_start)
+        if bracket_start == -1:
+            return None
+
+        # Look for complete algorithm objects by finding "}," patterns
+        # which indicate the end of one object and the start of another
+        complete_objects_end = bracket_start
+
+        # Find all positions where we have "}," (end of complete object)
+        pos = bracket_start
+        while True:
+            # Look for closing brace followed by comma
+            next_pos = text.find('},', pos + 1)
+            if next_pos == -1:
+                break
+            complete_objects_end = next_pos + 1  # Include the comma
+            pos = next_pos
+
+        # If we found at least one complete object
+        if complete_objects_end > bracket_start:
+            # Cut at the last complete object, remove trailing comma, close array and object
+            truncated = text[:complete_objects_end].rstrip(',').rstrip()
+            reconstructed = truncated + ']}'
+
+            try:
+                data = json.loads(reconstructed)
+                if isinstance(data, dict) and 'algorithms' in data:
+                    algos = data.get('algorithms', [])
+                    if isinstance(algos, list) and len(algos) > 0:
+                        logger.info(f"Salvaged {len(algos)} complete algorithms from truncated JSON")
+                        return data
+            except json.JSONDecodeError as e:
+                logger.debug(f"Failed to parse reconstructed JSON: {e}")
+
+    except Exception as e:
+        logger.debug(f"Salvage attempt failed: {e}")
+
+    return None
+
+
 def process_paper(
     api_key: str,
     model: str,
@@ -243,12 +303,22 @@ def process_paper(
         logger.debug(f"Extracted text preview: {text[:500]}...")
 
         # Try to parse JSON with better error handling
+        data = None
+        is_partial = False
         try:
             data = json.loads(text.strip())
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parse error at position {e.pos}: {e.msg}")
-            logger.error(f"Problematic JSON snippet: ...{text[max(0, e.pos-100):e.pos+100]}...")
-            raise ValueError(f"Invalid JSON from model: {e.msg}")
+            logger.warning(f"JSON parse error at position {e.pos}: {e.msg}")
+            logger.debug(f"Problematic JSON snippet: ...{text[max(0, e.pos-100):e.pos+100]}...")
+
+            # Try to salvage partial results
+            logger.info("Attempting to salvage complete algorithms from truncated response...")
+            data = try_salvage_partial_json(text)
+
+            if data is None:
+                raise ValueError(f"Invalid JSON from model: {e.msg}")
+            else:
+                is_partial = True
 
         parsed = AlgorithmList.model_validate(data)
 
@@ -277,8 +347,19 @@ def process_paper(
                 )
                 algo_count += 1
 
-        mark_paper_processed(papers_db_path, paper_id, success=True, algo_count=algo_count, model=model)
-        logger.info(f"✓ {paper_id}: {algo_count} algorithm(s) extracted")
+        # Determine success status and error message
+        success = True
+        error_msg = None
+        if is_partial:
+            error_msg = f"Partial extraction: {algo_count} algorithms saved, response truncated"
+            logger.warning(f"{paper_id}: {error_msg}")
+
+        mark_paper_processed(
+            papers_db_path, paper_id, success=success, extraction_error=error_msg, algo_count=algo_count, model=model
+        )
+
+        status_symbol = "⚠" if is_partial else "✓"
+        logger.info(f"{status_symbol} {paper_id}: {algo_count} algorithm(s) extracted")
         return algo_count
 
     except Exception as e:

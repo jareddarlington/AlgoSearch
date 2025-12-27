@@ -19,9 +19,9 @@ METHOD_NAME = 'query'
 SEARCH_QUERY = 'cat:cs.DS'
 ID_LIST = ''
 
-START = 0
+START = 300
 TOTAL_RESULTS = 100
-BATCH_SIZE = 10
+BATCH_SIZE = 25
 WAIT_TIME = 1  # time to wait between batches (in seconds)
 
 # TODO: clean up, optimize, and abstract further

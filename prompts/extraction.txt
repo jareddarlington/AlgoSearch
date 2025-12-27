@@ -1,45 +1,140 @@
-You are extracting algorithm records from a LaTeX research paper.
+You are extracting algorithm records from a LaTeX research paper. You must follow the rules below exactly.
 
-Task:
-- Identify every well-defined algorithm in the LaTeX source. Algorithms may appear in environments such as algorithm, algorithmic, algpseudocode, or equivalent pseudocode environments.
-- If there are no algorithms, return an empty list.
+================================================================
+TASK
+================================================================
+Identify every well-defined algorithm in the LaTeX source. Algorithms may appear in environments such as algorithm, algorithmic, algpseudocode, or equivalent pseudocode environments. If no algorithms are present, return an empty JSON list ([]).
 
-For each algorithm, output:
-- name.
-- aliases: alternative or shortened names.
-- description: 3-5 sentences optimized for semantic search (see description guidelines below).
-- latex: rewritten algorithm following the canonical LaTeX constraints.
-- categories: 3-5 high-level tags (algorithmic paradigms, data structures, problem domains).
+================================================================
+OUTPUT FORMAT (STRICT)
+================================================================
+Return a JSON array. Each element corresponds to exactly one algorithm and must contain only the following keys, in this exact order: name, aliases, description, latex, categories. No extra keys. No commentary. No markdown. No text outside JSON.
 
-Description guidelines for semantic search:
-- Lead with the problem or technique the algorithm solves/addresses (e.g., "finds shortest paths", "optimizes task scheduling", "clusters data points")
-- Include the algorithmic paradigm: greedy, dynamic programming, divide-and-conquer, randomized, approximation, online/offline, streaming, parallel, incremental, etc.
-- Mention key data structures used or manipulated: trees, graphs, heaps, hash tables, arrays, linked lists, tries, etc.
-- Include problem domain keywords: optimization, sorting, searching, graph traversal, clustering, matching, scheduling, routing, compression, parsing, etc.
-- Include practical use cases or applications when relevant: network routing, resource allocation, recommendation systems, data compression, machine learning, etc.
-- Include time/space complexity using plain language when easily describable: linear time, quadratic time, logarithmic time, constant space, etc. (do not use O-notation or LaTeX)
-- Use natural language phrases that someone would search for, not technical implementation jargon
-- Avoid mathematical notation, variable names, formula notation, or low-level implementation details
-- Write in plaintext; do not use LaTeX formatting
-- 3-5 sentences for adequate semantic coverage
+================================================================
+FIELD REQUIREMENTS
+================================================================
 
-Canonical LaTeX constraints:
-- Preserve all variable names, mathematical symbols, and expressions exactly.
-- Preserve the original logic and ordering of steps.
+FIELD: name
+- A descriptive, searchable name capturing the problem the algorithm solves.
+- Prefer functional names over paper-specific titles.
+
+Good examples:
+- Greedy Vertex Assignment Strategy for Graph Partitioning
+- Randomized Positional Scoring Function Approximation
+
+Bad examples:
+- Vertex Assignment
+- Scoring Approximation
+
+------------------------------------------------------------
+
+FIELD: aliases
+- A list of short names in plain text only (no LaTeX).
+- Include the original name used in the paper if present.
+- Include common abbreviations if they exist.
+- Names only; no descriptions.
+
+Examples:
+- ["Greedy Set Cover", "Set Cover Heuristic"]
+- ["OMP", "Orthogonal Matching Pursuit"]
+
+------------------------------------------------------------
+
+FIELD: description (SEMANTIC SEARCH OPTIMIZED)
+Write 3–5 sentences focused on discoverability, not formal precision. Use accessible, everyday language. Focus on what the algorithm accomplishes and why someone would use it, not how it works internally.
+
+Required structure:
+1. Sentence 1: What problem the algorithm solves and when it is used (not how).
+2. Sentences 2–4: Include searchable keywords:
+   - algorithmic paradigm (greedy, dynamic programming, randomized, approximation, etc.)
+   - problem domain (optimization, clustering, regression, graph algorithms, etc.)
+   - data structures (graphs, trees, matrices, heaps, etc.)
+   - applications (machine learning, routing, recommendation systems, data compression, etc.)
+3. Final sentence: Computational cost in plain language when easily expressible.
+
+DESCRIBE OUTCOMES, NOT PROCESSES:
+Write about what the algorithm achieves, not the steps it takes. Focus on the end result, the goal, the problem solved. Avoid describing the internal mechanics, iterations, or implementation details.
+
+GOOD example:
+"Finds approximate solutions to the set cover problem when exact optimization is impractical. Greedy approximation methods for combinatorial optimization commonly use this approach on collections of sets. Applications include resource allocation and scheduling where minimal coverage is needed. Runs in polynomial time."
+
+BAD examples:
+"This algorithm first initializes a set and then iteratively selects elements."
+"Optimizes O(n log n) objective using epsilon-approximation."
+"Starts with an empty solution and adds vertices until the graph is covered."
+"Processes elements one by one, updating the solution in each iteration."
+
+WRITING STYLE RULES:
+- Begin the first sentence with a verb phrase (never "This algorithm", "The algorithm", "This method", "It").
+- Throughout the entire description, avoid meta-references to "the algorithm" or "this method".
+- Use passive voice, direct statements, or refer to "the approach" if needed.
+- Focus on what is accomplished and why, not on describing how it works step-by-step.
+- Emphasize the goal, the result, the problem being solved.
+
+FORBIDDEN ANYWHERE IN DESCRIPTION:
+- Starting any sentence with: "This algorithm", "The algorithm", "This method", "It", "The method"
+- Meta-phrases: "this approach", "this technique", "the procedure" (use specific terms instead)
+- Describing internal mechanics: "initializes", "iterates through", "updates", "processes", "selects", "adds to", "removes from"
+- Procedural/sequential words: "first", "then", "next", "finally", "in each iteration", "step-by-step"
+- Implementation details: specific data structure operations, loop mechanics, variable updates
+- LaTeX notation or symbols (no $, \, Greek letters, or math commands)
+- Asymptotic notation in ANY form:
+  - No O(n), Omega, Theta notation
+  - No "sub-exponential", "super-polynomial", "sub-quadratic"
+  - No "nearly linear", "quasi-polynomial"
+  - Use plain language: "exponential", "polynomial", "linear", "logarithmic", "quadratic", "cubic"
+- Variable or parameter names from the algorithm
+- Generic filler phrases ("this algorithm", "this method is designed for")
+- Unexplained technical jargon
+
+------------------------------------------------------------
+
+FIELD: latex
+This field contains the rewritten LaTeX algorithm.
+
+LATEX REWRITING RULES (CRITICAL):
+- Preserve all variable names, symbols, expressions, logic, and step order exactly.
 - Do not add, remove, merge, or split steps.
-- Every executable line must use \State, unless it is a control structure.
-- Control flow must use algpseudocode macros (\If, \For, \While, \Repeat, \Until, \Return, etc.).
-- Assignments must use \gets.
-- Use \textsc{} for procedure or function names.
+- Every executable line must use \State unless it is a control structure.
+- Use algpseudocode control macros only (\If, \For, \While, \Repeat, \Until, \Return).
+- Assignments must use \gets (not = or :=).
+- Use \textsc{} only for standard procedure names (not custom commands).
 - Use LaTeX math symbols only; do not use Unicode characters.
-- These changes are formatting-only and must not alter semantics.
-- Ensure the algorithm compiles and makes sense stand-alone and doesn't rely on references.
-- Do not rename variables or change symbols.
-- Do not change the meaning of any step.
-- Do not introduce new logic or explanatory text.
-- The rewritten LaTeX must compile with standard algorithm and algpseudocode packages without errors.
+- Do not rename variables or change meanings.
+- Do not introduce explanations, comments, or extra text.
+- The result must compile with standard algorithm and algpseudocode packages.
+- Translate non-English text (captions, comments, keywords) to English.
+- ALL mathematical expressions, variables, symbols, and operators MUST be enclosed in $...$ for inline math.
+- Never write mathematical content in plain text outside of math mode.
 
-Canonical LaTeX structure sample:
+STANDARDIZATION (CRITICAL - CUSTOM COMMANDS NOT ALLOWED):
+- The algorithm must be self-contained and compile with ONLY standard packages.
+- Remove ALL references: \label{}, \ref{}, paper-specific names, theorem/appendix references.
+- Replace ALL paper-specific custom commands with standard LaTeX equivalents.
+
+Common custom commands to replace:
+- \None → \text{None} or \text{null}
+- \eps → \epsilon
+- \argmax → \arg\max (note the backslash between arg and max)
+- \argmin → \arg\min (note the backslash between arg and min)
+- Custom operators like \nextw(i), \gain(w), \opt(i) → rewrite as plain functions: \text{nextw}(i), \text{gain}(w), \text{opt}(i)
+- \odot → \otimes or \circ (standard)
+- \boxplus → \oplus (standard)
+- \bigoplus → \oplus (use the standard non-big version)
+- \triangleq → \coloneqq or simply write as $=$
+- \hdots → \ldots (standard for horizontal dots)
+- Paper-specific \textsc{CustomName} → either inline as function call or remove if not executable
+
+Standard replacements:
+- \| \| for norms (not \norm{})
+- \epsilon (not \eps)
+- \text{} instead of \mbox{}
+- Standard operators: \text{deg}(v), d(x,y)
+- Use standard function names: \max, \min, \log, \exp, \sin, \cos
+- Use \arg\max and \arg\min (with backslash between, not \argmax or \argmin)
+
+CANONICAL STRUCTURE:
+
 \begin{algorithm}
 \caption{<algorithm name>}
 \begin{algorithmic}[1]
@@ -51,14 +146,28 @@ Canonical LaTeX structure sample:
 \end{algorithmic}
 \end{algorithm}
 
-Other constraints:
-- Output must be valid JSON matching the provided schema.
-- Do not include any extra keys.
-- If something is unknown, use null (or empty list where appropriate).
-- Extract only algorithm-relevant content; do not quote the entire paper.
-- Do not add commentary or extra formatting.
+------------------------------------------------------------
 
-LaTeX source:
+FIELD: categories
+- Exactly 3–5 broad tags.
+- Choose from algorithmic paradigms, data structures, and problem domains.
+- Use lowercase except proper names.
+
+Good examples:
+- ["dynamic programming", "shortest path algorithms", "network flow"]
+- ["stochastic optimization", "convex optimization", "machine learning"]
+
+================================================================
+FINAL NOTES (IMPORTANT)
+================================================================
+- Follow the schema exactly.
+- Prefer explicit compliance over creativity.
+- If uncertain, leave the field null or empty rather than guessing.
+- Do not infer algorithms that are not explicitly defined.
+
+================================================================
+LATEX SOURCE
+================================================================
 <<<BEGIN_LATEX>>>
 {latex}
 <<<END_LATEX>>>
