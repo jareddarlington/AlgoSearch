@@ -1,33 +1,61 @@
 You are extracting algorithm records from a LaTeX research paper.
 
 Task:
-- Identify every well-defined algorithm in the LaTeX source (well-defined means in environments such as algorithm, algorithmic, and algpseudocode).
+- Identify every well-defined algorithm in the LaTeX source. Algorithms may appear in environments such as algorithm, algorithmic, algpseudocode, or equivalent pseudocode environments.
 - If there are no algorithms, return an empty list.
 
 For each algorithm, output:
-- name
-- aliases: alternative or shortened names (optional)
-- description: three to six sentences; problem solved, core idea, when used (keep it self-contained; do not reference other algorithms, sections, or the role of the algorithm within the paper)
-- latex: rewritten algorithm in LaTeX
-- inputs
-- outputs
-- variables: list of {{symbol, description}}
-- categories (optional)
-- time_complexity (optional)
-- space_complexity (optional)
+- name.
+- aliases: alternative or shortened names.
+- description: 3-5 sentences optimized for semantic search (see description guidelines below).
+- latex: rewritten algorithm following the canonical LaTeX constraints.
+- categories: 3-5 high-level tags (algorithmic paradigms, data structures, problem domains).
 
-Constraints on rewriting algorithm LaTeX:
-- Must use the same exact notation.
+Description guidelines for semantic search:
+- Lead with the problem or technique the algorithm solves/addresses (e.g., "finds shortest paths", "optimizes task scheduling", "clusters data points")
+- Include the algorithmic paradigm: greedy, dynamic programming, divide-and-conquer, randomized, approximation, online/offline, streaming, parallel, incremental, etc.
+- Mention key data structures used or manipulated: trees, graphs, heaps, hash tables, arrays, linked lists, tries, etc.
+- Include problem domain keywords: optimization, sorting, searching, graph traversal, clustering, matching, scheduling, routing, compression, parsing, etc.
+- Include practical use cases or applications when relevant: network routing, resource allocation, recommendation systems, data compression, machine learning, etc.
+- Include time/space complexity using plain language when easily describable: linear time, quadratic time, logarithmic time, constant space, etc. (do not use O-notation or LaTeX)
+- Use natural language phrases that someone would search for, not technical implementation jargon
+- Avoid mathematical notation, variable names, formula notation, or low-level implementation details
+- Write in plaintext; do not use LaTeX formatting
+- 3-5 sentences for adequate semantic coverage
+
+Canonical LaTeX constraints:
+- Preserve all variable names, mathematical symbols, and expressions exactly.
+- Preserve the original logic and ordering of steps.
 - Do not add, remove, merge, or split steps.
-- Preserve the original logic and ordering.
-- Use LaTeX math symbols only, not Unicode characters.
-- Use algorithm and algpseudocode packages (\Require for inputs, \Ensure for outputs, \State for steps, \gets for assignment, \textsc{} for procedure names)
+- Every executable line must use \State, unless it is a control structure.
+- Control flow must use algpseudocode macros (\If, \For, \While, \Repeat, \Until, \Return, etc.).
+- Assignments must use \gets.
+- Use \textsc{} for procedure or function names.
+- Use LaTeX math symbols only; do not use Unicode characters.
+- These changes are formatting-only and must not alter semantics.
+- Ensure the algorithm compiles and makes sense stand-alone and doesn't rely on references.
+- Do not rename variables or change symbols.
+- Do not change the meaning of any step.
+- Do not introduce new logic or explanatory text.
+- The rewritten LaTeX must compile with standard algorithm and algpseudocode packages without errors.
+
+Canonical LaTeX structure sample:
+\begin{algorithm}
+\caption{<algorithm name>}
+\begin{algorithmic}[1]
+\Require <inputs>
+\Ensure <outputs>
+\State <algorithm step>
+...
+\State \Return <return value>
+\end{algorithmic}
+\end{algorithm}
 
 Other constraints:
 - Output must be valid JSON matching the provided schema.
 - Do not include any extra keys.
 - If something is unknown, use null (or empty list where appropriate).
-- Do not quote the entire paper; extract only algorithm-relevant content.
+- Extract only algorithm-relevant content; do not quote the entire paper.
 - Do not add commentary or extra formatting.
 
 LaTeX source:

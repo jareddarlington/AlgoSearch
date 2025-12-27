@@ -27,10 +27,10 @@ WAIT_TIME = 1  # time to wait between batches (in seconds)
 # TODO: clean up, optimize, and abstract further
 
 
-def build_tex_file(id: str, max_size: int = 1000000):
+def build_tex_file(id: str, max_size: int = 5000000):
     '''
     id: arxiv id of paper
-    max_size: max size of tex files in bytes (1MB = ~250K tokens)
+    max_size: max size of tex files in bytes.
     '''
 
     url = f'{BASE_URL}src/{id}'
@@ -101,6 +101,7 @@ def build_paper_metadata(entry):
         'extraction_error': None,
         'processed': False,
         'algo_count': 0,
+        'model': None,
     }
 
 
@@ -213,7 +214,7 @@ def build(
                         metadata['extraction_error'],
                         1 if metadata['processed'] else 0,
                         metadata['algo_count'],
-                        None,
+                        metadata['model'],
                     ),
                 )
 
@@ -245,7 +246,7 @@ def build(
                         metadata['extraction_error'],
                         1 if metadata['processed'] else 0,
                         metadata['algo_count'],
-                        None,
+                        metadata['model'],
                     ),
                 )
 
