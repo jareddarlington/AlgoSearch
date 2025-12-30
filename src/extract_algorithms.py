@@ -19,11 +19,11 @@ import os
 import sqlite3
 import sys
 import time
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
+from db_utils import get_db_connection
 from model_output_structure import AlgorithmList
 
 logging.basicConfig(
@@ -54,20 +54,6 @@ def sha256_text(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8", errors="ignore")).hexdigest()
 
 
-@contextmanager
-def get_db_connection(db_path: str):
-    """Context manager for database connections."""
-    conn = sqlite3.connect(db_path)
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
 def init_database(db_path: str):
     """Initialize the SQLite database with algorithms table."""
     with get_db_connection(db_path) as conn:
@@ -75,11 +61,10 @@ def init_database(db_path: str):
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS algorithms (
-                algo_id TEXT PRIMARY KEY,
+                algo_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 paper_id TEXT NOT NULL,
                 hash TEXT NOT NULL,
                 name TEXT NOT NULL,
-                aliases TEXT,
                 description TEXT,
                 latex TEXT,
                 categories TEXT,
@@ -327,19 +312,16 @@ def process_paper(
         with get_db_connection(algorithms_db_path) as conn:
             cursor = conn.cursor()
             for idx, algo in enumerate(parsed.algorithms, start=1):
-                algo_id = f"{paper_id}#{idx}"
                 cursor.execute(
                     '''
                     INSERT OR REPLACE INTO algorithms
-                    (algo_id, paper_id, hash, name, aliases, description, latex, categories)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (paper_id, hash, name, description, latex, categories)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ''',
                     (
-                        algo_id,
                         paper_id,
                         hash_val,
                         algo.name,
-                        json.dumps(algo.aliases) if algo.aliases else None,
                         algo.description,
                         algo.latex,
                         json.dumps(algo.categories) if algo.categories else None,

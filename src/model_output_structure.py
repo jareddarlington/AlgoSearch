@@ -7,10 +7,6 @@ class Algorithm(BaseModel):
         ...,
         description="Descriptive, searchable name that captures what the algorithm does (e.g., 'Greedy Set Cover Approximation' instead of 'Deterministic Greedy')",
     )
-    aliases: List[str] = Field(
-        default_factory=list,
-        description="Original name from paper (e.g., 'Deterministic Greedy', 'DetGreedy'), plus any alternative or abbreviated names",
-    )
     description: str = Field(
         ...,
         description="3-5 sentence description optimized for semantic search: lead with problem/technique, include paradigm keywords (greedy, DP, etc.), data structures, problem domains, and use cases. Include complexity information using plain language (linear, quadratic, logarithmic, etc.) when easily describable. Avoid math notation and implementation details.",

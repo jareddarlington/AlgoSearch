@@ -1,25 +1,79 @@
+from pathlib import Path
 from FlagEmbedding import BGEM3FlagModel
 import torch
+import numpy as np
+import json
+from db_utils import get_db_connection
 
-# Use MPS (Metal Performance Shaders) for GPU acceleration on macOS
-model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)
+import os
 
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-model.model.to(device)
-print(f"Model device: {next(model.model.parameters()).device}")
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["JOBLIB_MULTIPROCESSING"] = "0"
 
-sentences_1 = ["What is BGE M3?", "Defination of BM25"]
-sentences_2 = [
-    "BGE M3 is an embedding model supporting dense retrieval, lexical matching and multi-vector interaction.",
-    "BM25 is a bag-of-words retrieval function that ranks a set of documents based on the query terms appearing in each document",
-]
+MODEL_BATCH_SIZE = 32
+MODEL_MAX_TOKENS = 256
 
-embeddings_1 = model.encode(
-    sentences_1,
-    batch_size=12,
-    max_length=8192,  # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
-)['dense_vecs']
-embeddings_2 = model.encode(sentences_2)['dense_vecs']
-similarity = embeddings_1 @ embeddings_2.T
-print(similarity)
-# [[0.6265, 0.3477], [0.3499, 0.678 ]]
+EMBED_TEMPLATE = """\
+Name: {name}
+Categories: {categories}
+Description: {description}
+"""
+
+
+def get_algo_data(algo_path: str):
+    with get_db_connection(algo_path) as conn:
+        # Gather relevant info from database
+        cursor = conn.cursor()
+        cursor.execute("SELECT algo_id, name, description, categories FROM algorithms")
+        rows = cursor.fetchall()
+
+        # Extract columns from rows (transpose)
+        algo_ids, names, descriptions, categories = zip(*rows)
+
+        # Format algorithm information for embedding
+        embed_texts = [
+            EMBED_TEMPLATE.format(
+                name=name,
+                categories="; ".join(json.loads(category)) if category else "",
+                description=description,
+            )
+            for name, description, category in zip(names, descriptions, categories)
+        ]
+
+        return embed_texts, algo_ids
+
+
+def embed(algo_path: str, model_name: str):
+    # Grab algorithm data
+    texts, ids = get_algo_data(algo_path)
+
+    # Create model
+    # model = BGEM3FlagModel(model_name, use_fp16=True)
+
+    # # Move model to device
+    # device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    # model.model.to(device)
+
+    model = BGEM3FlagModel(model_name, use_fp16=False, devices='cpu')
+
+    result = model.encode(
+        texts,
+        batch_size=MODEL_BATCH_SIZE,
+        max_length=MODEL_MAX_TOKENS,
+        return_dense=True,
+        return_colbert_vecs=False,
+        return_sparse=False,
+    )
+
+    embeddings = result['dense_vecs']
+
+    # Convert to numpy array with correct dtype for FAISS
+    embeddings = np.array(embeddings, dtype=np.float32)
+    ids = np.array(ids, dtype=np.int64)
+
+    return embeddings, ids
