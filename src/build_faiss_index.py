@@ -7,11 +7,10 @@ from embed import embed_db
 
 DEFAULT_INDEX_PATH = "data/index.faiss"
 DEFAULT_ALGO_PATH = "data/algorithms.db"
-DEFAULT_MODEL_NAME = "BAAI/bge-m3"
 
 
-def build_index(index_path, algo_path, model_name):
-    embeddings, ids = embed_db(algo_path, model_name)  # create vector embeddings from algorithm data
+def build_index(index_path, algo_path):
+    embeddings, ids = embed_db(algo_path)  # create vector embeddings from algorithm data
 
     # Ensure proper numpy types for FAISS
     embeddings = np.ascontiguousarray(embeddings, dtype=np.float32)
@@ -32,7 +31,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--index_path", type=str, default=DEFAULT_INDEX_PATH, help="Path to FAISS index")
     parser.add_argument("--algo_path", type=str, default=DEFAULT_ALGO_PATH, help="Path to algorithms database")
-    parser.add_argument("--model_name", type=str, default=DEFAULT_MODEL_NAME, help="Name of embedding model to use")
     args = parser.parse_args()
 
     algo_path = args.algo_path
@@ -49,7 +47,7 @@ def main():
                 valid_response = True
 
                 print("Rebuilding FAISS index...")
-                build_index(index_path, algo_path, args.model_name)  # rebuild index
+                build_index(index_path, algo_path)  # rebuild index
                 print("Complete: FAISS index rebuilt")
             elif response.lower() == "n" or not response:
                 valid_response = True
@@ -64,7 +62,7 @@ def main():
                 valid_response = True
 
                 print("Building FAISS index...")
-                build_index(index_path, algo_path, args.model_name)
+                build_index(index_path, algo_path)
                 print("Complete: FAISS index built")
             elif response.lower() == "n":
                 valid_response = True

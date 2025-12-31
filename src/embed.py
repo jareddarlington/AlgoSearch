@@ -24,15 +24,24 @@ import tqdm
 
 tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
 
-MODEL_BATCH_SIZE = 64
-MAX_DB_TOKENS = 256
-MAX_QUERY_TOKENS = 128
+QUERY_BATCH_SIZE = 1
+QUERY_MAX_TOKENS = 32
 
-EMBED_TEMPLATE = """\
+CORPUS_BATCH_SIZE = 64
+CORPUS_MAX_TOKENS = 256
+
+EMBEDDER_MODEL_NAME = "BAAI/bge-m3"
+
+ALGO_TEMPLATE = """\
 Name: {name}
 Categories: {categories}
 Description: {description}
 """
+
+# Create model and move to device
+model = BGEM3FlagModel(EMBEDDER_MODEL_NAME, use_fp16=True)
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+model.model = model.model.to(device, dtype=torch.float16)
 
 
 def get_algo_data(algo_path: str):
@@ -42,59 +51,53 @@ def get_algo_data(algo_path: str):
         cursor.execute("SELECT algo_id, name, description, categories FROM algorithms")
         rows = cursor.fetchall()
 
-        # Extract columns from rows (transpose)
-        algo_ids, names, descriptions, categories = zip(*rows)
-
-        # Format algorithm information for embedding
+        # Extract algorithm IDs and format texts for embedding
+        algo_ids = [row[0] for row in rows]
         embed_texts = [
-            EMBED_TEMPLATE.format(
-                name=name,
-                categories="; ".join(json.loads(category)) if category else "",
-                description=description,
+            ALGO_TEMPLATE.format(
+                name=row[1],
+                categories="; ".join(json.loads(row[3])),
+                description=row[2],
             )
-            for name, description, category in zip(names, descriptions, categories)
+            for row in rows
         ]
 
         return embed_texts, algo_ids
 
 
-def embed(text: list[str] | str, model_name: str, is_query: bool):
-    # Create model
-    model = BGEM3FlagModel(model_name, use_fp16=True)
-
-    # Move model to device
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    model.model.to(device)
-
-    if is_query:  # queries typically aren't as long
-        max_tokens = MAX_QUERY_TOKENS
-    else:
-        max_tokens = MAX_DB_TOKENS
-
-    result = model.encode(
-        text,
-        batch_size=MODEL_BATCH_SIZE,
-        max_length=max_tokens,
-        return_dense=True,
-        return_colbert_vecs=False,
-        return_sparse=False,
-    )
-
-    embeddings = result['dense_vecs']
-
-    # Convert to numpy array with correct dtype for FAISS
-    embeddings = np.array(embeddings, dtype=np.float32)
+@torch.inference_mode()
+def embed(text: list[str] | str, is_query: bool):
+    if is_query:  # embed query
+        embeddings = model.encode_queries(
+            text,
+            batch_size=None,
+            max_length=QUERY_MAX_TOKENS,
+            return_dense=True,
+            return_sparse=False,
+            return_colbert_vecs=False,
+        )['dense_vecs']
+    else:  # embed corpus
+        embeddings = model.encode_corpus(
+            text,
+            batch_size=CORPUS_BATCH_SIZE,
+            max_length=CORPUS_MAX_TOKENS,
+            return_dense=True,
+            return_sparse=False,
+            return_colbert_vecs=False,
+        )['dense_vecs']
 
     return embeddings
 
 
-def embed_db(algo_path: str, model_name: str):
+def embed_db(algo_path: str):
     # Grab algorithm data
     texts, ids = get_algo_data(algo_path)
 
-    embeddings = embed(texts, model_name)
+    embeddings = embed(texts, is_query=False)
 
+    # TODO: confirm that I actually need this
     # Convert to numpy array with correct dtype for FAISS
+    embeddings = np.array(embeddings, dtype=np.float32)
     ids = np.array(ids, dtype=np.int64)
 
     return embeddings, ids
