@@ -2,9 +2,7 @@ from pathlib import Path
 import faiss
 import numpy as np
 import argparse
-from embed import embed
-
-# FOR LATER: index = faiss.read_index(INDEX_PATH)
+from embed import embed_db
 
 
 DEFAULT_INDEX_PATH = "data/index.faiss"
@@ -13,18 +11,17 @@ DEFAULT_MODEL_NAME = "BAAI/bge-m3"
 
 
 def build_index(index_path, algo_path, model_name):
-    embeddings, ids = embed(algo_path, model_name)  # create vector embeddings from algorithm data
+    embeddings, ids = embed_db(algo_path, model_name)  # create vector embeddings from algorithm data
 
     # Ensure proper numpy types for FAISS
     embeddings = np.ascontiguousarray(embeddings, dtype=np.float32)
     ids = np.ascontiguousarray(ids, dtype=np.int64)
 
-    faiss.normalize_L2(embeddings)  # normalize for cosine similarity (in-place)
-
     # Build index (with ids)
     dim = len(embeddings[0])  # dimension of embeddings
-    index = faiss.IndexFlatIP(dim)  # using exact search for inner product (since dataset is small)
-    index = faiss.IndexIDMap(index)  # wrap with id map index
+    index = faiss.index_factory(dim, "IDMap,L2norm,Flat")
+    # index = faiss.index_factory(dim, "IDMap,PCA512,L2norm,Flat")
+    # index.train(embeddings)  # train PCA
     index.add_with_ids(embeddings, ids)  # add vectors to index (with ids)
 
     faiss.write_index(index, index_path)
