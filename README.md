@@ -54,11 +54,11 @@ Here were my priorities...
 
 ### 1st Priority
 
-1. **Cheap**: I'm a student and don't have money to spend on fun projects like this, so I knew if I wanted to make the project happen, I needed to keep everything <u>**free**</u> - I was able to accomplish this by using open source tools and running AI models locally (except for Gemini API, which I used free trail credits for 😅)
+1. **Cheap**: I'm a student and don't have money to spend on fun projects like this, so I knew if I wanted to make the project happen, I needed to keep everything <u>**free**</u> - I was able to accomplish this by using open source tools and running AI models locally (except for Gemini API, which I used free trial credits for 😅)
 
 2. **Low resource**: I don't own a GPU...
 
-3. **Fast**: From personal experience, I know that people hate waiting for more than 3 seconds for anything to load, so making the sytem fast was high priority for me - I honestly didn't expect this one to be as big of a challenge until I finished my basic implementation and realized it was taking 15+ seconds per query to return results 😭 - In the end, I was able to accomplish consistent <u>**sub-200ms latency**</u> on an Apple M4 chip with MPS enabled
+3. **Fast**: From personal experience, I know that people hate waiting for more than 3 seconds for anything to load, so making the system fast was high priority for me - I honestly didn't expect this one to be as big of a challenge until I finished my basic implementation and realized it was taking 15+ seconds per query to return results 😭 - In the end, I was able to accomplish consistent <u>**sub-200ms latency**</u> on an Apple M4 chip with MPS enabled
 
 ### 2nd Priority
 
