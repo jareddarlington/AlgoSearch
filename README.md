@@ -62,7 +62,7 @@ Here were my priorities...
 
 1. **Scalable and modular**
 
-2. **Accuracy and recall**
+2. **High accuracy and recall**
 
 ## Ideas & Additions
 
