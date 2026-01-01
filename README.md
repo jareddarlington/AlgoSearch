@@ -2,13 +2,13 @@
 
 ## What is Semantic Search?
 
-...
+TODO
 
 PUT DEMONSTRATIVE IMAGE HERE
 
 ## Usage
 
-...
+TODO
 
 ## System Design
 
@@ -30,6 +30,8 @@ PUT DEMONSTRATIVE IMAGE HERE
     - See `build_faiss_index.py`
     - Embed algorithm profile (name, description, categories)
     - Build and store FAISS index in `data/index.faiss`
+
+\* Caveat on the database: ...
 
 ### Search
 
@@ -79,7 +81,7 @@ Here were my priorities...
 
 ## What I learned
 
-...
+TODO
 
 system design is hard, compute is expensive, search and rec sys is fun
 
