@@ -1,45 +1,90 @@
 # AlgoSearch: Semantic Search for Algorithms on arXiv
 
-## 1. System Design
+## What is Semantic Search?
 
-### 1.1. Building Vector Database
+...
 
-1. Scrape arXiv for CS papers
-    - Only in the "Data Structures and Algorithms" category for now
-    - Not sure the best option for this yet, but [arXiv's API](https://info.arxiv.org/help/api/) provides abstracts, metadata, and links to html/pdfs - html/pdfs are harder to parse for algorithms than LaTeX files in this case though - Claude Sonnet 4.5 seems to be really consistent at parsing algorithms via pdfs (no direct LaTeX), so likely use that or a smaller Claude model
-2. Store each algorithm with its paper's abstract and metadata (also surrounding context for embedding but not long term)
-3. Pass algorithm data into summarization model
-    - Probably use deepseek-coder-1.3b-instruct to start, maybe switch to a larger or newer model later (DeepSeek-Coder-V2-Lite-Instruct)
-    - Consider doing multiple pases of summarization
-4. Pass summarizations into embedder
-    - Considering specter2_base or bge-large-en-v1.5
-    - IDEA: convert algorithms to actual code during summarization step (along with normal summarization), then use a code embedder (like Codestral Embed) + late fusion during search (two aligned embedding spaces in this case)
-5. Store embeddings in FAISS
-    - Also need mapping between FAISS embeddings and algorithm data
-    - Look into Pinecone for a real database database
+PUT DEMONSTRATIVE IMAGE HERE
 
-### 1.2. Search
+## Usage
+
+...
+
+## System Design
+
+### Building Vector Database
+
+1. Build papers database
+
+    - Scrape arXiv papers; see `scrape_arxiv.py`
+    - Store paper metadata in `data/papers.db`
+    - If LaTeX source contains an algorithm environment, store it temporarily in `data/temp/{id}.txt`
+
+2. Build algorithms database
+
+    - Pass LaTeX source into a large language model and build a profile for each algorithm defined in the paper; see `extract_algorithms.py`
+    - Store algorithm profiles in `data/algorithms.db`
+
+3. Build FAISS index
+
+    - See `build_faiss_index.py`
+    - Embed algorithm profile (name, description, categories)
+    - Build and store FAISS index in `data/index.faiss`
+
+### Search
 
 1. Take in natural language query
-2. Rewrite and normalize query
-3. Create query embedding
-4. Filter candidates (metadata filtering)
-5. Get candidates from FAISS
-6. Re-rank candidates (heuristics + BM25, probably won't use neural re-ranker)
-7. Return results
-8. Collect ratings for fine-tuning
+2. Create query embedding (BGE-M3 dense embeddings)
+3. Metadata candidate filtering (TODO)
+4. Retrieve top-k candidates (FAISS)
+5. Rerank candidates (cross-encoder reranking)
+6. Return top-n results
 
-### 1.3 Fine-Tuning
+### Fine-Tuning (TODO)
 
--   TODO
+-   Possible relevance signals: y/n relevance question to user, paper click-through rate, etc
 
-## x. Additions
+## Design Choices & Philosophy
 
--   Create custom algorithm retrieval benchmark
--   Replacing FAISS with my own search implementation could also be fun (HNSW or IVF+PQ) - might be a whole other project though
--   Could add intent detection (for lexical vs semantic search decision - right now the system is only semantic)
--   Collect more data for fine-tuning (click-through, etc)
+While planning and designing this project...
+
+Here were my priorities...
+
+### 1st Priority
+
+1. **Cheap**: I'm a student and don't have money to spend on fun projects like this, so I knew if I wanted to make the project happen, I needed to keep everything <u>**free**</u> - I was able to accomplish this by using open source tools and running AI models locally (except for Gemini API, which I used free trail credits for 😅)
+
+2. **Low resource**: I don't own a GPU...
+
+3. **Fast**: From personal experience, I know that people hate waiting for more than 3 seconds for anything to load, so making the sytem fast was high priority for me - I honestly didn't expect this one to be as big of a challenge until I finished my basic implementation and realized it was taking 15+ seconds per query to return results 😭 - In the end, I was able to accomplish consistent <u>**sub-200ms latency**</u> on an Apple M4 chip with MPS enabled
+
+### 2nd Priority
+
+1. **Scalable and modular**
+
+2. **Accuracy and recall**
+
+## Ideas & Additions
+
+### Easier Implementations
+
+1. Create demo website (probably host on either GitHub Pages or Hugging Face Spaces)
+2. Add back LLM query spell correction / normalization and possibly multiple query rewriting for higher recall if latency allows
+
+### Harder Implementations
+
+1. Write my own ANN implementation / FAISS replacement
+2. Embed raw LaTeX source or code snippets using a code embedding model for late fusion (could improve recall and playing around with mulitmodal search techniques would fun + I would learn a lot)
+3. Create algorithm-specific retrieval benchmark
+
+## What I learned
+
+...
+
+system design is hard, compute is expensive, search and rec sys is fun
 
 ## Acknowledgements
+
+**Tools & Libraries**: FAISS, PyTorch, sentence-transformers (ms-marco-MiniLM-L2-v2), FlagEmbedding (BGE-M3), Google Gemini API (gemini-2.5-flash), SQLite
 
 Thank you to arXiv for use of its open access interoperability.

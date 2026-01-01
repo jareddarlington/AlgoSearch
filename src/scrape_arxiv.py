@@ -25,6 +25,7 @@ BATCH_SIZE = 25
 WAIT_TIME = 1  # time to wait between batches (in seconds)
 
 # TODO: clean up, optimize, and abstract further
+# TODO: store more paper metadata
 
 
 def build_tex_file(id: str, max_size: int = 5000000):
