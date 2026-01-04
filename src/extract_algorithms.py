@@ -1,15 +1,21 @@
-# python ./src/extraction.py --input_dir ./data/temp --papers_db ./data/papers.db --algorithms_db ./data/algorithms.db --model gemini-2.5-flash
+# python ./src/extract_algorithms.py --input_dir ./data/temp --papers_db ./data/papers.db --algorithms_db ./data/algorithms.db --model gemini-2.5-flash
 
 import argparse
 import json
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from db_utils import get_db_connection
 from schemas import AlgorithmList
 from gemini import create_model, generate_content
 
+OUTPUT_TOKEN_LIMIT = 16384
+
 PROMPT_PATH = "prompts/extraction.txt"
 PROMPT_TEMPLATE = open(PROMPT_PATH, encoding="utf-8").read()
+
+
+# TODO: consider if i even want to try to extract/rewrite the latex of the algos, i could just keep track of which page(s) the algo is on in the paper (if keep track of anything at all) - summarization for embedding is probably useful enough - do update the extraction prompt though for better summaries - no need to restart extraction process though, just go with what i have
 
 
 def init_database(db_path: str):
@@ -222,7 +228,7 @@ def main() -> int:
     client, config = create_model(
         model_name=args.model,
         temperature=0.0,
-        max_output_tokens=8192,
+        max_output_tokens=OUTPUT_TOKEN_LIMIT,
         response_schema=schema,
     )
 
@@ -244,4 +250,22 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Prevent Mac from sleeping during extraction
+    caffeinate_process = None
+    try:
+        # Start caffeinate to keep system awake
+        caffeinate_process = subprocess.Popen(
+            ['caffeinate', '-d', '-i', '-m', '-s'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        print('System sleep prevention enabled (caffeinate running)\n')
+
+        exit_code = main()
+
+    finally:
+        # Ensure caffeinate is terminated when script ends
+        if caffeinate_process:
+            caffeinate_process.terminate()
+            caffeinate_process.wait()
+            print('\nSystem sleep prevention disabled')
+
+    raise SystemExit(exit_code)

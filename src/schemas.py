@@ -19,7 +19,7 @@ class Algorithm(BaseModel):
     )
     categories: List[str] = Field(
         ...,
-        description="3-5 high-level categories: algorithmic paradigms, data structures, problem domains.",
+        description="3-5 high-level categories: algorithmic paradigms, data structures, problem domains. Use singular form consistently.",
     )
 
 

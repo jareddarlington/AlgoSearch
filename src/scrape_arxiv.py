@@ -5,6 +5,9 @@ import urllib.request
 import feedparser
 import time
 import tarfile
+import subprocess
+import os
+import signal
 from clean_tex import clean_tex
 
 '''
@@ -19,13 +22,14 @@ METHOD_NAME = 'query'
 SEARCH_QUERY = 'cat:cs.DS'
 ID_LIST = ''
 
-START = 300
-TOTAL_RESULTS = 100
-BATCH_SIZE = 25
+START = 1000
+TOTAL_RESULTS = 6000
+BATCH_SIZE = 100
 WAIT_TIME = 1  # time to wait between batches (in seconds)
 
 # TODO: clean up, optimize, and abstract further
 # TODO: store more paper metadata
+# TODO: change TOTAL_RESULTS to END?
 
 
 def build_tex_file(id: str, max_size: int = 5000000):
@@ -265,8 +269,24 @@ def build(
 
 
 def __main__():
-    total_fetched, total_successful = build(DATA_PATH, START, TOTAL_RESULTS, BATCH_SIZE, WAIT_TIME)
-    print(total_successful, total_fetched)
+    # Prevent Mac from sleeping during execution
+    caffeinate_process = None
+    try:
+        # Start caffeinate to keep system awake
+        caffeinate_process = subprocess.Popen(
+            ['caffeinate', '-d', '-i', '-m', '-s'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        print('System sleep prevention enabled (caffeinate running)')
+
+        total_fetched, total_successful = build(DATA_PATH, START, TOTAL_RESULTS, BATCH_SIZE, WAIT_TIME)
+        print(total_successful, total_fetched)
+
+    finally:
+        # Ensure caffeinate is terminated when script ends
+        if caffeinate_process:
+            caffeinate_process.terminate()
+            caffeinate_process.wait()
+            print('System sleep prevention disabled')
 
 
 if __name__ == '__main__':
