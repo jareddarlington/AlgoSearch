@@ -22,10 +22,10 @@ METHOD_NAME = 'query'
 SEARCH_QUERY = 'cat:cs.DS'
 ID_LIST = ''
 
-START = 1000
-TOTAL_RESULTS = 6000
+START = 10000
+TOTAL_RESULTS = 50000
 BATCH_SIZE = 100
-WAIT_TIME = 1  # time to wait between batches (in seconds)
+WAIT_TIME = 3  # time to wait between batches (in seconds)
 
 # TODO: clean up, optimize, and abstract further
 # TODO: store more paper metadata
