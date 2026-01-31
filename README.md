@@ -54,7 +54,7 @@ The following were my main priorities and constraints while building AlgoSearch:
 
 3. **Fast**: From personal experience, I know that people hate waiting more than 3 seconds for anything to load, so making the system fast was high priority for me. I honestly didn't expect this one to be as big of a challenge until I finished my basic implementation and realized it was taking 15+ seconds per query to return results 😭. In the end, I was able to accomplish consistent **sub-200ms latency** on an Mac mini.
 
-4. **Performant**: I considered performance lower priority mostly due to my resource and speed constraints, but also because the reason I started this project to challenge my system design skills and build my understanding of search pipelines, not necessarily to ace benchmarks.
+4. **Performant**: I considered performance lower priority mostly due to my resource and speed constraints, but also because the reason I started this project was to challenge my system design skills and build my understanding of search pipelines, not necessarily to ace benchmarks.
 
 <!-- ## Ideas & Additions
 
