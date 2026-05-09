@@ -6,7 +6,11 @@ from sentence_transformers import CrossEncoder
 BATCH_SIZE = 32
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L2-v2', device=device, max_length=256)
+model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L2-v2', device=device, max_length=128)
+
+# Warmup: trigger Metal shader compilation so the first real rerank isn't slow
+with torch.inference_mode():
+    model.predict([("warmup", "warmup")])
 
 
 def rerank_candidates(query: str, candidates: List[str]) -> List[Tuple[str, float]]:

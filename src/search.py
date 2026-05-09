@@ -16,8 +16,8 @@ DEFAULT_LLM_NAME = "gemini-2.5-flash"
 DEFAULT_MAX_TOKENS = 1024
 PROMPT_PATH = "prompts/query-rewrite.txt"
 PROMPT_TEMPLATE = open(PROMPT_PATH, encoding="utf-8").read()
-K = 20
-N = 5
+K = 5
+N = 3
 
 ALGO_TEMPLATE = """\
 Name: {name}
@@ -59,13 +59,13 @@ def main():
     start_time = time.time()
     embedding = embed(query, is_query=True)
     embedding_time = time.time() - start_time
-    print(f"Embedding time: {embedding_time:.3f}s")
+    print(f"Embedding time: {embedding_time:.3f}s\n")
 
     # Similarity search
     start_time = time.time()
     _, ids = index.search(embedding.reshape(1, -1), K)
     search_time = time.time() - start_time
-    print(f"Search time: {search_time:.3f}s")
+    print(f"Search time: {search_time:.3f}s\n")
 
     # Reranking
     start_time = time.time()
@@ -73,11 +73,14 @@ def main():
     reranked_candidates = rerank_candidates(query, candidates)
     top_n = reranked_candidates[0:N]
     reranking_time = time.time() - start_time
-    print(f"Reranking time: {reranking_time:.3f}s")
+    print(f"Reranking time: {reranking_time:.3f}s\n")
 
-    # for item in topk:
-    #     print(item)
-    #     print()
+    total_time = embedding_time + search_time + reranking_time
+    print(f"Total time: {total_time:.3f}s\n")
+
+    for item in top_n:
+        print(item)
+        print()
 
 
 if __name__ == "__main__":
