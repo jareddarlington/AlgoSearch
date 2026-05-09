@@ -35,7 +35,7 @@ TODO -->
  <!-- 3. Metadata candidate filtering (TODO) -->
 
 1. Take in natural language query
-2. Create query embedding (BGE-M3 dense embeddings)
+2. Create query embedding (Qwen3 dense embeddings)
 3. Retrieve top-k candidates (FAISS)
 4. Rerank candidates (cross-encoder reranking)
 5. Return top-n results
@@ -48,11 +48,11 @@ TODO -->
 
 The following were my main priorities and constraints while building AlgoSearch:
 
-1. **Cheap**: I'm a student and don't have money to spend on fun projects like this, so, I knew if I wanted to make the project happen, I needed to keep everything **free**. I was able to accomplish this by using open source tools and running models locally (except for Gemini which was used for parsing algorithms - I used free trial credits though 😅).
+1. **Cheap**: I'm a student and don't have money to spend on fun projects like this, so, I knew if I wanted to make the project happen, I needed to keep everything **free**. I was able to accomplish this by using open source tools and running models locally.
 
 2. **Low resource**: I don't own a GPU...
 
-3. **Fast**: From personal experience, I know that people hate waiting more than 3 seconds for anything to load, so making the system fast was high priority for me. I honestly didn't expect this one to be as big of a challenge until I finished my basic implementation and realized it was taking 15+ seconds per query to return results 😭. In the end, I was able to accomplish consistent **sub-200ms latency** on an Mac mini.
+3. **Fast**: From personal experience, I know that people hate waiting more than 3 seconds for anything to load, so making the system fast was high priority for me. I honestly didn't expect this one to be as big of a challenge until I finished my basic implementation and realized it was taking 15+ seconds per query to return results. In the end, I was able to accomplish consistent **sub-150ms latency** on an Mac mini.
 
 4. **Performant**: I considered performance lower priority mostly due to my resource and speed constraints, but also because the reason I started this project was to challenge my system design skills and build my understanding of search pipelines, not necessarily to ace benchmarks.
 
