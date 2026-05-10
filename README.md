@@ -77,6 +77,4 @@ system design is hard, compute is expensive, search and rec sys is fun -->
 
 ## Acknowledgements
 
-**Tools & Libraries**: FAISS, PyTorch, sentence-transformers (ms-marco-MiniLM-L2-v2), FlagEmbedding (BGE-M3), Google Gemini API (gemini-2.5-flash), SQLite
-
 Thank you to arXiv for use of its open access interoperability.
